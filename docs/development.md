@@ -58,6 +58,17 @@ docker compose \
 The local gateway listens on `http://127.0.0.1:8080` by default. Override it
 with `PROBEINTERVIEW_HTTP_PORT`.
 
+Runtime health endpoints are available through the gateway:
+
+- `/health/live` reports API process liveness without checking external
+  vendors.
+- `/health/ready` reports readiness only when PostgreSQL and the task broker
+  are available.
+
+API responses include `X-Request-ID`. Errors use RFC 9457
+`application/problem+json`; normal logs are structured JSON and omit request
+bodies, credentials and complete exception details.
+
 Stop the local topology without deleting its development data:
 
 ```bash

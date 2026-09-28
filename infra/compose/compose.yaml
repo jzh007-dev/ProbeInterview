@@ -58,7 +58,7 @@ services:
         - -c
         - >-
           import urllib.request;
-          urllib.request.urlopen("http://127.0.0.1:8000/docs", timeout=2).read()
+          urllib.request.urlopen("http://127.0.0.1:8000/health/ready", timeout=2).read()
       interval: 5s
       timeout: 3s
       retries: 20

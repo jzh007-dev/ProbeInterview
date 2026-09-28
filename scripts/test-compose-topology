@@ -166,4 +166,7 @@ unhealthy = {
 assert not unhealthy, unhealthy
 PY
 
-curl --fail --silent --show-error "http://127.0.0.1:${test_port}/docs" >/dev/null
+curl --fail --silent --show-error \
+  "http://127.0.0.1:${test_port}/health/ready" \
+  | python3 -c \
+    'import json, sys; assert json.load(sys.stdin) == {"status": "ready", "dependencies": {"database": "available", "task_queue": "available"}}'
