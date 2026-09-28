@@ -31,8 +31,14 @@ context: |
   - Logs are structured and exclude private source text, request bodies, prompts, secrets and tokens.
 
   Commands:
-  - Build, test and local-start commands do not exist until setup-foundation implements them.
-  - The planned canonical full verification entry is scripts/verify.
+  - Backend install: cd apps/backend && uv sync --frozen --all-groups.
+  - Mini-program install: cd apps/miniprogram && npm ci.
+  - Clean-room skeleton check: scripts/check-skeleton.
+  - Backend unit tests: cd apps/backend && uv run pytest tests/unit.
+  - Backend static checks: cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy.
+  - Mini-program type check: cd apps/miniprogram && npm run typecheck.
+  - Local API and Worker startup commands are documented in docs/development.md.
+  - Docker Compose, migrations and the canonical full scripts/verify entry are added by later setup-foundation tasks.
 
 rules:
   design:

@@ -16,6 +16,7 @@ require_path() {
 
 require_path "${backend_source}/pyproject.toml"
 require_path "${backend_source}/uv.lock"
+require_path "${backend_source}/.env.example"
 require_path "${backend_source}/src/probeinterview/__init__.py"
 require_path "${backend_source}/src/probeinterview/platform/foundation/domain/__init__.py"
 require_path "${backend_source}/src/probeinterview/platform/foundation/application/__init__.py"
@@ -52,6 +53,7 @@ trap 'rm -rf "${scratch_dir}"' EXIT
 mkdir -p "${scratch_dir}/backend" "${scratch_dir}/miniprogram"
 cp \
   "${backend_source}/.python-version" \
+  "${backend_source}/.env.example" \
   "${backend_source}/pyproject.toml" \
   "${backend_source}/uv.lock" \
   "${scratch_dir}/backend/"
@@ -68,8 +70,10 @@ cp -R "${miniprogram_source}/miniprogram" "${scratch_dir}/miniprogram/"
 UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
   uv sync --project "${scratch_dir}/backend" --frozen --all-groups
 UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
+  PROBEINTERVIEW_DATABASE_URL="postgresql+psycopg://probe@localhost/probe" \
+  PROBEINTERVIEW_CELERY_BROKER_URL="redis://localhost:6379/0" \
   uv run --project "${scratch_dir}/backend" --frozen python -c \
-  'import probeinterview; from probeinterview.entrypoints.api import app; from probeinterview.entrypoints.worker import celery_app; assert app.title == "ProbeInterview API"; assert celery_app.main == "probeinterview"'
+  'import probeinterview; from probeinterview.entrypoints.api import create_app; from probeinterview.entrypoints.worker import create_celery_app; assert create_app().title == "ProbeInterview API"; assert create_celery_app().main == "probeinterview"'
 
 (
   cd "${scratch_dir}/miniprogram"

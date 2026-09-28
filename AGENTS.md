@@ -43,13 +43,17 @@ Do not introduce a new language, framework, database, cloud service or major dep
 
 ## Commands
 
-The repository has no implementation commands yet. `setup-foundation` must establish and document:
+Available setup and focused-check commands:
 
-- dependency installation;
-- local Docker Compose startup and shutdown;
-- database migration;
-- focused backend and mini-program checks;
-- the canonical full `scripts/verify` entry.
+- backend install: `cd apps/backend && uv sync --frozen --all-groups`;
+- mini-program install: `cd apps/miniprogram && npm ci`;
+- clean-room skeleton check: `scripts/check-skeleton`;
+- backend unit tests: `cd apps/backend && uv run pytest tests/unit`;
+- backend format/lint/type checks: `cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy`;
+- mini-program type check: `cd apps/miniprogram && npm run typecheck`;
+- local API and Worker startup: see `docs/development.md`.
 
-Until those commands exist, do not invent substitutes in project guidance. After they exist, keep this section and `openspec/config.yaml` synchronized with the verified commands.
-
+Docker Compose startup and shutdown, database migration, and the canonical full
+`scripts/verify` entry do not exist until their remaining `setup-foundation`
+tasks implement them. Do not invent substitutes in project guidance. Keep this
+section and `openspec/config.yaml` synchronized with verified commands.
