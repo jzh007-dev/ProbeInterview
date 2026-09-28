@@ -10,6 +10,14 @@ ObjectStorageAdapter = Literal["fake", "oss"]
 ModelAdapter = Literal["fake", "bailian"]
 
 
+def _is_blank(value: str | SecretStr | None) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, SecretStr):
+        value = value.get_secret_value()
+    return not value.strip()
+
+
 class Settings(BaseSettings):
     """Configuration shared by the API and worker processes."""
 
@@ -63,12 +71,12 @@ class Settings(BaseSettings):
                 "oss_access_key_id",
                 "oss_access_key_secret",
             ):
-                if getattr(self, field_name) is None:
+                if _is_blank(getattr(self, field_name)):
                     missing.append(field_name)
 
         if (
             self.embedding_adapter == "bailian" or self.structured_llm_adapter == "bailian"
-        ) and self.bailian_api_key is None:
+        ) and _is_blank(self.bailian_api_key):
             missing.append("bailian_api_key")
 
         if missing:

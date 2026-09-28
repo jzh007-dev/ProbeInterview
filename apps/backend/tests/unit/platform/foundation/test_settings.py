@@ -97,3 +97,24 @@ def test_production_real_adapters_require_credentials() -> None:
 
     with pytest.raises(ValidationError, match="missing production adapter settings"):
         settings_type()(**values, _env_file=None)
+
+
+@pytest.mark.parametrize(
+    ("field_name", "blank_value"),
+    [
+        ("oss_endpoint", ""),
+        ("oss_bucket", "   "),
+        ("oss_access_key_id", ""),
+        ("oss_access_key_secret", " "),
+        ("bailian_api_key", ""),
+    ],
+)
+def test_production_rejects_blank_adapter_settings(
+    field_name: str,
+    blank_value: str,
+) -> None:
+    with pytest.raises(ValidationError, match=field_name):
+        settings_type()(
+            **production_values(**{field_name: blank_value}),
+            _env_file=None,
+        )
