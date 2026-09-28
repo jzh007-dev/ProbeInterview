@@ -24,14 +24,46 @@ require_path "${backend_source}/src/probeinterview/platform/foundation/infrastru
 require_path "${miniprogram_source}/package.json"
 require_path "${miniprogram_source}/package-lock.json"
 require_path "${miniprogram_source}/tsconfig.json"
+require_path "${miniprogram_source}/.node-version"
 require_path "${repo_root}/infra/compose"
+
+expected_node_version="$(<"${miniprogram_source}/.node-version")"
+actual_node_version="$(node --version)"
+actual_node_version="${actual_node_version#v}"
+if [[ "${actual_node_version}" != "${expected_node_version}" ]]; then
+  printf 'expected Node %s, found %s\n' "${expected_node_version}" "${actual_node_version}" >&2
+  exit 1
+fi
+
+expected_npm_version="$(
+  node -e \
+    'const value = require(process.argv[1]).packageManager; process.stdout.write(value.split("@")[1])' \
+    "${miniprogram_source}/package.json"
+)"
+actual_npm_version="$(npm --version)"
+if [[ "${actual_npm_version}" != "${expected_npm_version}" ]]; then
+  printf 'expected npm %s, found %s\n' "${expected_npm_version}" "${actual_npm_version}" >&2
+  exit 1
+fi
 
 scratch_dir="$(mktemp -d "${TMPDIR:-/tmp}/probeinterview-skeleton.XXXXXX")"
 trap 'rm -rf "${scratch_dir}"' EXIT
 
 mkdir -p "${scratch_dir}/backend" "${scratch_dir}/miniprogram"
-rsync -a --exclude='.venv' "${backend_source}/" "${scratch_dir}/backend/"
-rsync -a --exclude='node_modules' "${miniprogram_source}/" "${scratch_dir}/miniprogram/"
+cp \
+  "${backend_source}/.python-version" \
+  "${backend_source}/pyproject.toml" \
+  "${backend_source}/uv.lock" \
+  "${scratch_dir}/backend/"
+cp -R "${backend_source}/src" "${scratch_dir}/backend/"
+cp \
+  "${miniprogram_source}/.node-version" \
+  "${miniprogram_source}/package.json" \
+  "${miniprogram_source}/package-lock.json" \
+  "${miniprogram_source}/project.config.json" \
+  "${miniprogram_source}/tsconfig.json" \
+  "${scratch_dir}/miniprogram/"
+cp -R "${miniprogram_source}/miniprogram" "${scratch_dir}/miniprogram/"
 
 UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
   uv sync --project "${scratch_dir}/backend" --frozen --all-groups
