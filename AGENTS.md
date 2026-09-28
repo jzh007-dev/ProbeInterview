@@ -51,9 +51,11 @@ Available setup and focused-check commands:
 - backend unit tests: `cd apps/backend && uv run pytest tests/unit`;
 - backend format/lint/type checks: `cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy`;
 - mini-program type check: `cd apps/miniprogram && npm run typecheck`;
+- Compose topology check: `scripts/test-compose-topology`;
 - local API and Worker startup: see `docs/development.md`.
 
-Docker Compose startup and shutdown, database migration, and the canonical full
-`scripts/verify` entry do not exist until their remaining `setup-foundation`
-tasks implement them. Do not invent substitutes in project guidance. Keep this
-section and `openspec/config.yaml` synchronized with verified commands.
+Docker Compose startup and shutdown are documented in `docs/development.md`.
+Database migration and the canonical full `scripts/verify` entry do not exist
+until later changes implement them. Do not invent substitutes in project
+guidance. Keep this section and `openspec/config.yaml` synchronized with
+verified commands.

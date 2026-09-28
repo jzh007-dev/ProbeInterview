@@ -1,0 +1,7 @@
+:80 {
+	handle /gateway-health {
+		respond "ok" 200
+	}
+
+	reverse_proxy api:8000
+}

@@ -1,0 +1,114 @@
+name: probeinterview
+
+x-backend-environment: &backend-environment
+  PROBEINTERVIEW_ENVIRONMENT: development
+  PROBEINTERVIEW_DATABASE_URL: postgresql+psycopg://probeinterview:probeinterview@postgres:5432/probeinterview
+  PROBEINTERVIEW_CELERY_BROKER_URL: redis://redis:6379/0
+  PROBEINTERVIEW_LOCAL_ACTOR_ENABLED: "true"
+  PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED: "true"
+  PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER: fake
+  PROBEINTERVIEW_EMBEDDING_ADAPTER: fake
+  PROBEINTERVIEW_STRUCTURED_LLM_ADAPTER: fake
+
+x-backend-service: &backend-service
+  image: probeinterview-backend:local
+  build:
+    context: ../../apps/backend
+    dockerfile: Dockerfile
+  environment: *backend-environment
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${PROBEINTERVIEW_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/gateway-health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  api:
+    <<: *backend-service
+    command:
+      - uvicorn
+      - probeinterview.entrypoints.api:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen("http://127.0.0.1:8000/docs", timeout=2).read()
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  worker:
+    <<: *backend-service
+    hostname: worker
+    command: ["python", "-m", "probeinterview.entrypoints.worker"]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          celery --broker="$${PROBEINTERVIEW_CELERY_BROKER_URL}"
+          inspect ping --destination celery@worker --timeout 2
+          | grep -q pong
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17
+    environment:
+      POSTGRES_DB: probeinterview
+      POSTGRES_PASSWORD: probeinterview
+      POSTGRES_USER: probeinterview
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U probeinterview -d probeinterview"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.2.1-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:

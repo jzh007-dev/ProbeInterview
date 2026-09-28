@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+compose_dir="${repo_root}/infra/compose"
+base_file="${compose_dir}/compose.yaml"
+test_file="${compose_dir}/compose.test.yaml"
+production_file="${compose_dir}/compose.production.yaml"
+
+for required_file in "${base_file}" "${test_file}" "${production_file}"; do
+  if [[ ! -f "${required_file}" ]]; then
+    printf 'missing required Compose file: %s\n' "${required_file}" >&2
+    exit 1
+  fi
+done
+
+command -v docker >/dev/null
+command -v curl >/dev/null
+command -v python3 >/dev/null
+
+docker compose --project-directory "${compose_dir}" -f "${base_file}" config --quiet
+docker compose \
+  --project-directory "${compose_dir}" \
+  -f "${base_file}" \
+  -f "${test_file}" \
+  config --quiet
+production_config_file="$(
+  mktemp "${TMPDIR:-/tmp}/probeinterview-production-compose.XXXXXX"
+)"
+trap 'rm -f "${production_config_file}"' EXIT
+
+PROBEINTERVIEW_DOMAIN="probe.example.invalid" \
+PROBEINTERVIEW_DATABASE_URL="postgresql+psycopg://probeinterview:test-database-password@postgres:5432/probeinterview" \
+PROBEINTERVIEW_CELERY_BROKER_URL="redis://redis:6379/0" \
+PROBEINTERVIEW_POSTGRES_PASSWORD="test-database-password" \
+PROBEINTERVIEW_OSS_ENDPOINT="https://oss.example.invalid" \
+PROBEINTERVIEW_OSS_BUCKET="probeinterview" \
+PROBEINTERVIEW_OSS_ACCESS_KEY_ID="test-access-key" \
+PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET="test-access-secret" \
+PROBEINTERVIEW_BAILIAN_API_KEY="test-bailian-key" \
+  docker compose \
+  --project-directory "${compose_dir}" \
+  -f "${base_file}" \
+  -f "${production_file}" \
+  config --format json >"${production_config_file}"
+
+python3 - "${production_config_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+services = config["services"]
+assert set(services) == {"api", "caddy", "postgres", "redis", "worker"}
+
+for service_name in ("api", "postgres", "redis", "worker"):
+    assert not services[service_name].get("ports"), service_name
+
+caddy_ports = {
+    (port["published"], port["target"], port["protocol"])
+    for port in services["caddy"]["ports"]
+}
+assert ("80", 80, "tcp") in caddy_ports
+assert ("443", 443, "tcp") in caddy_ports
+assert any(
+    volume["source"].endswith("Caddyfile.production")
+    and volume["target"] == "/etc/caddy/Caddyfile"
+    and volume["read_only"]
+    for volume in services["caddy"]["volumes"]
+)
+
+expected_backend_environment = {
+    "PROBEINTERVIEW_ENVIRONMENT": "production",
+    "PROBEINTERVIEW_DATABASE_URL": (
+        "postgresql+psycopg://probeinterview:test-database-password"
+        "@postgres:5432/probeinterview"
+    ),
+    "PROBEINTERVIEW_CELERY_BROKER_URL": "redis://redis:6379/0",
+    "PROBEINTERVIEW_LOCAL_ACTOR_ENABLED": "false",
+    "PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED": "false",
+    "PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER": "oss",
+    "PROBEINTERVIEW_EMBEDDING_ADAPTER": "bailian",
+    "PROBEINTERVIEW_STRUCTURED_LLM_ADAPTER": "bailian",
+    "PROBEINTERVIEW_OSS_ENDPOINT": "https://oss.example.invalid",
+    "PROBEINTERVIEW_OSS_BUCKET": "probeinterview",
+    "PROBEINTERVIEW_OSS_ACCESS_KEY_ID": "test-access-key",
+    "PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET": "test-access-secret",
+    "PROBEINTERVIEW_BAILIAN_API_KEY": "test-bailian-key",
+}
+for service_name in ("api", "worker"):
+    environment = services[service_name]["environment"]
+    for key, value in expected_backend_environment.items():
+        assert environment[key] == value, (service_name, key, environment[key])
+
+assert (
+    services["postgres"]["environment"]["POSTGRES_PASSWORD"]
+    == "test-database-password"
+)
+PY
+
+caddy_image="$(
+  python3 - "${production_config_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+print(config["services"]["caddy"]["image"])
+PY
+)"
+
+docker run --rm \
+  -v "${compose_dir}/Caddyfile.local:/etc/caddy/Caddyfile:ro" \
+  "${caddy_image}" \
+  caddy validate --config /etc/caddy/Caddyfile
+docker run --rm \
+  -e PROBEINTERVIEW_DOMAIN="probe.example.invalid" \
+  -v "${compose_dir}/Caddyfile.production:/etc/caddy/Caddyfile:ro" \
+  "${caddy_image}" \
+  caddy validate --config /etc/caddy/Caddyfile
+
+rm -f "${production_config_file}"
+trap - EXIT
+
+project_name="probeinterview-test-${$}"
+test_port="$((20000 + RANDOM % 20000))"
+status_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-compose-status.XXXXXX")"
+compose_args=(
+  --project-name "${project_name}"
+  --project-directory "${compose_dir}"
+  -f "${base_file}"
+  -f "${test_file}"
+)
+
+cleanup() {
+  PROBEINTERVIEW_TEST_PORT="${test_port}" docker compose "${compose_args[@]}" \
+    down --volumes --remove-orphans >/dev/null 2>&1 || true
+  rm -f "${status_file}"
+}
+trap cleanup EXIT
+
+PROBEINTERVIEW_TEST_PORT="${test_port}" docker compose "${compose_args[@]}" \
+  up --build --detach --wait --wait-timeout 180
+
+PROBEINTERVIEW_TEST_PORT="${test_port}" docker compose "${compose_args[@]}" \
+  ps --format json >"${status_file}"
+
+python3 - "${status_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+raw = pathlib.Path(sys.argv[1]).read_text().strip()
+records = json.loads(raw) if raw.startswith("[") else [
+    json.loads(line) for line in raw.splitlines() if line
+]
+expected = {"api", "caddy", "postgres", "redis", "worker"}
+actual = {record["Service"] for record in records}
+assert actual == expected, (actual, expected)
+unhealthy = {
+    record["Service"]: record.get("Health")
+    for record in records
+    if record.get("Health") != "healthy"
+}
+assert not unhealthy, unhealthy
+PY
+
+curl --fail --silent --show-error "http://127.0.0.1:${test_port}/docs" >/dev/null

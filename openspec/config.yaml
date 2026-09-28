@@ -37,8 +37,9 @@ context: |
   - Backend unit tests: cd apps/backend && uv run pytest tests/unit.
   - Backend static checks: cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy.
   - Mini-program type check: cd apps/miniprogram && npm run typecheck.
+  - Compose topology check: scripts/test-compose-topology.
   - Local API and Worker startup commands are documented in docs/development.md.
-  - Docker Compose, migrations and the canonical full scripts/verify entry are added by later setup-foundation tasks.
+  - Database migrations and the canonical full scripts/verify entry are added by later changes.
 
 rules:
   design:

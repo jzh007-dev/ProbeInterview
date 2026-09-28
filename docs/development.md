@@ -4,7 +4,7 @@
 
 - Python 3.12.13 managed by uv 0.11 or newer
 - Node.js 26.3.1 and npm 11.16.0
-- Docker with Docker Compose for the runtime topology added by task 2.1
+- Docker with Docker Compose
 
 ## Install locked dependencies
 
@@ -41,13 +41,52 @@ uv run python -m probeinterview.entrypoints.worker
 ```
 
 The API and worker validate configuration before starting. The worker requires
-the Redis broker URL from `.env`; the complete local database, broker, gateway,
-and worker topology is established by task 2.1.
+the Redis broker URL from `.env`.
+
+## Run the local Compose topology
+
+From the repository root, start Caddy, the API, the Worker, PostgreSQL +
+pgvector and Redis:
+
+```bash
+docker compose \
+  --project-directory infra/compose \
+  -f infra/compose/compose.yaml \
+  up --build --detach --wait
+```
+
+The local gateway listens on `http://127.0.0.1:8080` by default. Override it
+with `PROBEINTERVIEW_HTTP_PORT`.
+
+Stop the local topology without deleting its development data:
+
+```bash
+docker compose \
+  --project-directory infra/compose \
+  -f infra/compose/compose.yaml \
+  down
+```
+
+Run the isolated topology check, which uses a unique Compose project and port
+and removes its containers and volumes on exit:
+
+```bash
+scripts/test-compose-topology
+```
+
+Production uses `compose.production.yaml` with the base file. Before running
+it, inject `PROBEINTERVIEW_DOMAIN`, `PROBEINTERVIEW_DATABASE_URL`,
+`PROBEINTERVIEW_CELERY_BROKER_URL`, `PROBEINTERVIEW_POSTGRES_PASSWORD`, the
+`PROBEINTERVIEW_OSS_*` settings and `PROBEINTERVIEW_BAILIAN_API_KEY` through the
+deployment environment or secret management. The production override makes
+Caddy the only published service and enables its automatic TLS and HTTP to
+HTTPS handling.
 
 ## Focused checks
 
 ```bash
 scripts/check-skeleton
+scripts/test-compose-topology
 
 cd apps/backend
 uv run pytest tests/unit
