@@ -1,0 +1,1706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>ProbeInterview Report Flow</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="ProbeInterview Report Flow" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;ProbeInterview Report Flow&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: var(--border-radius-lg, 12.5px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;style&gt;
+  #probe-report-v2 {
+    color: inherit;
+  }
+
+  #probe-report-v2 .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 350px));
+    gap: 28px;
+    justify-content: center;
+    align-items: start;
+    margin-top: 22px;
+  }
+
+  #probe-report-v2 .preview-label {
+    margin-bottom: 9px;
+    color: #65716b;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .phone {
+    min-height: 655px;
+    overflow: hidden;
+    border: 7px solid rgba(255,255,255,0.96);
+    border-radius: 39px;
+    color: #28312c;
+    background:
+      radial-gradient(circle at 100% 7%, rgba(223,245,130,0.4), transparent 26%),
+      radial-gradient(circle at 0% 74%, rgba(112,225,229,0.23), transparent 30%),
+      linear-gradient(155deg, #f4f5f1, #e9eeec 66%, #f1edf4);
+    box-shadow: 0 30px 65px rgba(55,68,62,0.18);
+  }
+
+  #probe-report-v2 .status {
+    padding: 9px 17px 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .screen {
+    padding: 14px 15px 18px;
+  }
+
+  #probe-report-v2 .header,
+  #probe-report-v2 .score-row,
+  #probe-report-v2 .record-head,
+  #probe-report-v2 .knowledge-row,
+  #probe-report-v2 .detail-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #probe-report-v2 .header {
+    margin-bottom: 14px;
+  }
+
+  #probe-report-v2 .header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .round-action {
+    width: 35px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 9px 20px rgba(50,64,57,0.09);
+    font-size: 13px;
+  }
+
+  #probe-report-v2 .score-card {
+    padding: 17px;
+    margin-bottom: 11px;
+    border-radius: 25px;
+    color: #f7faf8;
+    background:
+      radial-gradient(circle at 82% 7%, rgba(226,246,127,0.44), transparent 35%),
+      linear-gradient(145deg, #50645a, #29372f);
+    box-shadow: 0 20px 38px rgba(45,60,52,0.2);
+  }
+
+  #probe-report-v2 .eyebrow {
+    color: rgba(255,255,255,0.67);
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .score-row {
+    align-items: end;
+    margin-top: 7px;
+  }
+
+  #probe-report-v2 .score {
+    font-size: 43px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  #probe-report-v2 .level {
+    padding: 6px 9px;
+    border-radius: 999px;
+    color: #35402f;
+    background: #e4f391;
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .coverage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  #probe-report-v2 .coverage div {
+    padding: 8px 5px;
+    border-radius: 12px;
+    text-align: center;
+    background: rgba(255,255,255,0.08);
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .coverage strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .tabs {
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.48);
+  }
+
+  #probe-report-v2 .tab {
+    padding: 8px;
+    text-align: center;
+    border-radius: 12px;
+    color: #748079;
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .tab.active {
+    color: #313b34;
+    background: rgba(255,255,255,0.88);
+    box-shadow: 0 7px 15px rgba(50,65,58,0.08);
+  }
+
+  #probe-report-v2 .section-title {
+    margin: 16px 2px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+  }
+
+  #probe-report-v2 .section-title strong {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .section-title span {
+    color: #7e8983;
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .record-list {
+    display: grid;
+    gap: 7px;
+  }
+
+  #probe-report-v2 .record {
+    padding: 11px 12px;
+    border: 1px solid rgba(255,255,255,0.64);
+    border-radius: 17px;
+    background: rgba(255,255,255,0.6);
+    box-shadow: 0 10px 22px rgba(50,65,58,0.07);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  #probe-report-v2 .record-head {
+    gap: 8px;
+  }
+
+  #probe-report-v2 .record-title {
+    min-width: 0;
+  }
+
+  #probe-report-v2 .record-title strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .record-title span {
+    display: block;
+    margin-top: 4px;
+    color: #7d8882;
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .record-score {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .record-score i {
+    color: #748079;
+    font-style: normal;
+  }
+
+  #probe-report-v2 .knowledge-preview {
+    margin-top: 9px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  #probe-report-v2 .knowledge-preview span {
+    padding: 4px 6px;
+    border-radius: 999px;
+    color: #53645b;
+    background: rgba(135,218,214,0.25);
+    font-size: 7px;
+  }
+
+  #probe-report-v2 .review-box {
+    padding: 12px;
+    margin-top: 11px;
+    border: 1px solid rgba(255,255,255,0.65);
+    border-radius: 19px;
+    background: rgba(255,255,255,0.52);
+    box-shadow: 0 11px 24px rgba(50,65,58,0.07);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  #probe-report-v2 .review-box strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .review-box p {
+    margin: 0 0 9px;
+    color: #7b8680;
+    font-size: 8px;
+    line-height: 1.4;
+  }
+
+  #probe-report-v2 .check-row {
+    padding: 8px 0;
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    gap: 7px;
+    align-items: center;
+    border-top: 1px solid rgba(72,84,78,0.06);
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .checkbox {
+    width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #8a9790;
+    border-radius: 5px;
+    color: #35423b;
+    background: #e4f391;
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .check-row em {
+    color: #7d8982;
+    font-style: normal;
+  }
+
+  #probe-report-v2 .optional-action {
+    margin-top: 10px;
+    padding: 9px;
+    text-align: center;
+    border: 1px solid rgba(65,78,71,0.14);
+    border-radius: 999px;
+    color: #415047;
+    background: rgba(255,255,255,0.56);
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .finish {
+    margin-top: 8px;
+    padding: 11px;
+    text-align: center;
+    border-radius: 999px;
+    color: #fff;
+    background: #35423b;
+    box-shadow: 0 10px 20px rgba(40,52,46,0.18);
+    font-size: 9px;
+  }
+
+  #probe-report-v2 .question {
+    padding: 14px;
+    margin-bottom: 10px;
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 88% 0%, rgba(255,255,255,0.56), transparent 30%),
+      linear-gradient(145deg, #eef7bb, #dbe986);
+    box-shadow: 0 16px 31px rgba(80,99,56,0.14);
+  }
+
+  #probe-report-v2 .question-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .question h4 {
+    margin: 14px 0 7px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  #probe-report-v2 .question p {
+    margin: 0;
+    color: rgba(48,56,47,0.66);
+    font-size: 8px;
+    line-height: 1.55;
+  }
+
+  #probe-report-v2 .knowledge-list {
+    display: grid;
+    gap: 7px;
+  }
+
+  #probe-report-v2 .knowledge-item {
+    padding: 11px 12px;
+    border-radius: 17px;
+    background: rgba(255,255,255,0.66);
+    box-shadow: 0 9px 20px rgba(50,65,58,0.07);
+  }
+
+  #probe-report-v2 .knowledge-row {
+    gap: 8px;
+  }
+
+  #probe-report-v2 .knowledge-name strong {
+    display: block;
+    font-size: 9px;
+    font-weight: 500;
+  }
+
+  #probe-report-v2 .knowledge-name span {
+    display: block;
+    margin-top: 3px;
+    color: #7c8881;
+    font-size: 7px;
+  }
+
+  #probe-report-v2 .knowledge-state {
+    padding: 5px 7px;
+    border-radius: 999px;
+    font-size: 7px;
+  }
+
+  #probe-report-v2 .knowledge-state.good {
+    color: #416058;
+    background: #dff3e7;
+  }
+
+  #probe-report-v2 .knowledge-state.weak {
+    color: #5e536d;
+    background: #ece6f9;
+  }
+
+  #probe-report-v2 .expanded {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(74,86,80,0.07);
+  }
+
+  #probe-report-v2 .expanded-label {
+    margin: 9px 0 4px;
+    color: #7b8680;
+    font-size: 7px;
+  }
+
+  #probe-report-v2 .evidence {
+    padding: 9px;
+    border-left: 3px solid #9bdedb;
+    border-radius: 0 10px 10px 0;
+    color: #4e5c54;
+    background: rgba(139,222,218,0.14);
+    font-size: 8px;
+    line-height: 1.55;
+  }
+
+  #probe-report-v2 .missed {
+    color: #665c70;
+    font-size: 8px;
+    line-height: 1.5;
+  }
+
+  #probe-report-v2 .select-knowledge {
+    margin-top: 10px;
+    padding: 9px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 13px;
+    color: #4f465b;
+    background: #ece7f8;
+    font-size: 8px;
+  }
+
+  #probe-report-v2 .decision {
+    margin-top: 22px;
+    padding: 18px 20px;
+    border: 2px solid color-mix(in srgb, currentColor 14%, transparent);
+    border-radius: 22px;
+    cursor: pointer;
+  }
+
+  #probe-report-v2 .decision.selected {
+    border-color: #9aac5e;
+    box-shadow: 0 0 0 4px rgba(178,199,108,0.2);
+  }
+
+  #probe-report-v2 .decision strong {
+    font-weight: 500;
+  }
+
+  @media (max-width: 700px) {
+    #probe-report-v2 .preview-grid {
+      grid-template-columns: minmax(280px, 350px);
+    }
+  }
+&lt;/style&gt;
+
+&lt;div id=&quot;probe-report-v2&quot;&gt;
+  &lt;h2&gt;面试报告 · 总览与知识点评估&lt;/h2&gt;
+  &lt;p class=&quot;subtitle&quot;&gt;复盘是可选分支。用户可以只查看报告后结束，也可以选择具体知识点创建复盘。&lt;/p&gt;
+
+  &lt;div class=&quot;preview-grid&quot;&gt;
+    &lt;section&gt;
+      &lt;div class=&quot;preview-label&quot;&gt;报告总览&lt;/div&gt;
+      &lt;div class=&quot;phone&quot;&gt;
+        &lt;div class=&quot;status&quot;&gt;&lt;span&gt;9:41&lt;/span&gt;&lt;span&gt;5G · 88%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;screen&quot;&gt;
+          &lt;div class=&quot;header&quot;&gt;&lt;h3&gt;面试报告&lt;/h3&gt;&lt;span class=&quot;round-action&quot;&gt;↗&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;score-card&quot;&gt;
+            &lt;div class=&quot;eyebrow&quot;&gt;7 年经验基线 · 证据覆盖 86%&lt;/div&gt;
+            &lt;div class=&quot;score-row&quot;&gt;&lt;span class=&quot;score&quot;&gt;78&lt;/span&gt;&lt;span class=&quot;level&quot;&gt;达到基线&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;coverage&quot;&gt;
+              &lt;div&gt;&lt;strong&gt;8&lt;/strong&gt;回答问题&lt;/div&gt;
+              &lt;div&gt;&lt;strong&gt;14&lt;/strong&gt;知识点&lt;/div&gt;
+              &lt;div&gt;&lt;strong&gt;3&lt;/strong&gt;建议复盘&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;tabs&quot;&gt;
+            &lt;div class=&quot;tab&quot;&gt;能力概览&lt;/div&gt;
+            &lt;div class=&quot;tab active&quot;&gt;逐题评估&lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;section-title&quot;&gt;&lt;strong&gt;回答记录&lt;/strong&gt;&lt;span&gt;点击查看知识点详情&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;record-list&quot;&gt;
+            &lt;div class=&quot;record&quot;&gt;
+              &lt;div class=&quot;record-head&quot;&gt;
+                &lt;div class=&quot;record-title&quot;&gt;&lt;strong&gt;Q1 如何建立 RAG 评测体系？&lt;/strong&gt;&lt;span&gt;3 个知识点 · 4 条回答证据&lt;/span&gt;&lt;/div&gt;
+                &lt;div class=&quot;record-score&quot;&gt;&lt;span&gt;76&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;knowledge-preview&quot;&gt;
+                &lt;span&gt;检索召回指标&lt;/span&gt;&lt;span&gt;Faithfulness&lt;/span&gt;&lt;span&gt;线上反馈闭环&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;record&quot;&gt;
+              &lt;div class=&quot;record-head&quot;&gt;
+                &lt;div class=&quot;record-title&quot;&gt;&lt;strong&gt;Q2 模型路由如何做技术取舍？&lt;/strong&gt;&lt;span&gt;2 个知识点 · 3 条回答证据&lt;/span&gt;&lt;/div&gt;
+                &lt;div class=&quot;record-score&quot;&gt;&lt;span&gt;83&lt;/span&gt;&lt;i&gt;›&lt;/i&gt;&lt;/div&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;knowledge-preview&quot;&gt;
+                &lt;span&gt;路由策略&lt;/span&gt;&lt;span&gt;成本与延迟&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;review-box&quot;&gt;
+            &lt;strong&gt;可选：加入复盘&lt;/strong&gt;
+            &lt;p&gt;只选择你希望继续学习的具体知识点。&lt;/p&gt;
+            &lt;div class=&quot;check-row&quot;&gt;&lt;span class=&quot;checkbox&quot;&gt;✓&lt;/span&gt;&lt;span&gt;Faithfulness 证据一致性&lt;/span&gt;&lt;em&gt;Q1&lt;/em&gt;&lt;/div&gt;
+            &lt;div class=&quot;check-row&quot;&gt;&lt;span class=&quot;checkbox&quot;&gt;✓&lt;/span&gt;&lt;span&gt;线上反馈闭环设计&lt;/span&gt;&lt;em&gt;Q1&lt;/em&gt;&lt;/div&gt;
+            &lt;div class=&quot;check-row&quot;&gt;&lt;span class=&quot;checkbox&quot;&gt;&lt;/span&gt;&lt;span&gt;模型路由成本控制&lt;/span&gt;&lt;em&gt;Q2&lt;/em&gt;&lt;/div&gt;
+            &lt;div class=&quot;optional-action&quot;&gt;创建复盘（2）&lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;finish&quot;&gt;完成面试并返回首页&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;section&gt;
+      &lt;div class=&quot;preview-label&quot;&gt;点击记录后的知识点评估&lt;/div&gt;
+      &lt;div class=&quot;phone&quot;&gt;
+        &lt;div class=&quot;status&quot;&gt;&lt;span&gt;9:41&lt;/span&gt;&lt;span&gt;5G · 88%&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;screen&quot;&gt;
+          &lt;div class=&quot;header&quot;&gt;&lt;h3&gt;回答评估&lt;/h3&gt;&lt;span class=&quot;round-action&quot;&gt;×&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;question&quot;&gt;
+            &lt;div class=&quot;question-meta&quot;&gt;&lt;span&gt;问题 1&lt;/span&gt;&lt;strong&gt;76 分&lt;/strong&gt;&lt;/div&gt;
+            &lt;h4&gt;如何为一个线上 RAG 系统建立评测体系？&lt;/h4&gt;
+            &lt;p&gt;本题共评估 3 个知识点，点击每项查看证据、命中和遗漏。&lt;/p&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;knowledge-list&quot;&gt;
+            &lt;div class=&quot;knowledge-item&quot;&gt;
+              &lt;div class=&quot;knowledge-row&quot;&gt;
+                &lt;div class=&quot;knowledge-name&quot;&gt;&lt;strong&gt;检索召回指标&lt;/strong&gt;&lt;span&gt;Recall@K · MRR · Hit Rate&lt;/span&gt;&lt;/div&gt;
+                &lt;span class=&quot;knowledge-state good&quot;&gt;证据充分&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div class=&quot;knowledge-item&quot;&gt;
+              &lt;div class=&quot;knowledge-row&quot;&gt;
+                &lt;div class=&quot;knowledge-name&quot;&gt;&lt;strong&gt;Faithfulness 证据一致性&lt;/strong&gt;&lt;span&gt;回答是否忠于检索证据&lt;/span&gt;&lt;/div&gt;
+                &lt;span class=&quot;knowledge-state weak&quot;&gt;建议复盘&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;div class=&quot;expanded&quot;&gt;
+                &lt;div class=&quot;expanded-label&quot;&gt;回答证据&lt;/div&gt;
+                &lt;div class=&quot;evidence&quot;&gt;“生成部分我会检查回答是否正确，并统计用户是否满意。”&lt;/div&gt;
+                &lt;div class=&quot;expanded-label&quot;&gt;命中&lt;/div&gt;
+                &lt;div class=&quot;missed&quot;&gt;意识到需要独立评价生成质量。&lt;/div&gt;
+                &lt;div class=&quot;expanded-label&quot;&gt;遗漏&lt;/div&gt;
+                &lt;div class=&quot;missed&quot;&gt;没有说明如何验证回答结论可由检索证据支持，也未区分事实正确性与证据忠实度。&lt;/div&gt;
+                &lt;div class=&quot;select-knowledge&quot;&gt;&lt;span&gt;加入复盘&lt;/span&gt;&lt;span&gt;□&lt;/span&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;div class=&quot;knowledge-item&quot;&gt;
+              &lt;div class=&quot;knowledge-row&quot;&gt;
+                &lt;div class=&quot;knowledge-name&quot;&gt;&lt;strong&gt;线上反馈闭环设计&lt;/strong&gt;&lt;span&gt;业务指标、人工反馈与回流&lt;/span&gt;&lt;/div&gt;
+                &lt;span class=&quot;knowledge-state weak&quot;&gt;证据不足&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;finish&quot;&gt;返回报告&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+
+  &lt;section class=&quot;decision&quot; data-choice=&quot;report-flow-v2&quot; onclick=&quot;toggleSelect(this)&quot;&gt;
+    &lt;strong&gt;点击确认报告页的信息架构&lt;/strong&gt;
+    &lt;div class=&quot;eyebrow&quot; style=&quot;color:#748079;margin-top:5px&quot;&gt;确认重点：记录可展开、知识点评估粒度，以及复盘完全可选。&lt;/div&gt;
+  &lt;/section&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

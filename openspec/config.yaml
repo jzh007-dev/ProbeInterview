@@ -1,32 +1,58 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  ProbeInterview 是面向程序员面试准备的微信小程序，包含知识学习、资料导入、模拟面试、评估报告和复盘。
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Architecture:
+  - Project architecture: docs/architecture.md
+  - ADR index: docs/adr/README.md
+  - UI and architecture visuals: docs/design/visuals/README.md
+  - Active implementation starts with openspec/changes/setup-foundation.
+  - deliver-probeinterview-mvp is reference-only and is not an active implementation baseline.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Technology:
+  - Monorepo: apps/backend, apps/miniprogram, infra/compose, scripts.
+  - Backend: Python 3.12, uv, FastAPI, Pydantic 2, SQLAlchemy 2, Alembic.
+  - Client: native WeChat mini program, TypeScript, TDesign.
+  - Data: PostgreSQL + pgvector. PostgreSQL is the business source of truth.
+  - Jobs: Redis + Celery; messages carry IDs and workers reload versioned inputs.
+  - Edge/deployment: Caddy, Docker Compose, single Alibaba Cloud ECS for MVP.
+  - External services: Alibaba Cloud OSS and Bailian behind application ports.
+  - Verification: pytest, Ruff, mypy, Jest + miniprogram-simulate, Compose E2E.
+
+  Architecture conventions:
+  - Backend is a module-first modular monolith. Cross-module calls use application contracts or ports.
+  - Domain/application code must not import vendor SDKs or another module's repository/ORM model.
+  - Public and personal knowledge share one domain structure and differ by scope, owner and capability.
+  - Raw sources and versions are authoritative; embeddings are versioned, rebuildable derived data.
+  - ActorContext and owner/public scope filters are applied before record or vector retrieval.
+  - Success APIs return typed resources; errors use RFC 9457 Problem Details.
+  - Async creation uses HTTP 202 + Location; retryable commands use Idempotency-Key.
+  - Logs are structured and exclude private source text, request bodies, prompts, secrets and tokens.
+
+  Commands:
+  - Build, test and local-start commands do not exist until setup-foundation implements them.
+  - The planned canonical full verification entry is scripts/verify.
+
+rules:
+  design:
+    - "State the concrete technology and boundary used by the change; do not leave implementation-affecting choices unresolved."
+    - "Reference docs/architecture.md and every applicable ADR from docs/adr/README.md instead of duplicating project-level rationale."
+    - "Introducing or replacing a language, framework, database, cloud service or major dependency requires an explicitly accepted ADR first."
+    - "Keep real vendor SDKs in infrastructure adapters; domain and application layers depend only on ports."
+    - "For UI changes, list affected pages plus loading, empty, error and success states, and reference the relevant file under docs/design/visuals/."
+    - "Treat deliver-probeinterview-mvp and Agent implementation visuals as references, not active technical baselines."
+  tasks:
+    - "Slice tasks vertically: each task should deliver a testable behavior across the necessary API, application and storage boundaries."
+    - "Every task must state its verification command, automated test or observable acceptance evidence."
+    - "Land tests and documentation with the behavior that requires them; do not defer all testing to a final group."
+    - "Do not add work outside the proposal, specs and design of the current change."
+
+operations:
+  apply:
+    guidance:
+      - "Read docs/architecture.md, docs/adr/README.md and the current change artifacts before implementation."
+      - "Use only the technologies and boundaries accepted in architecture.md and ADRs."
+      - "If implementation requires a new architecture decision or a spec/design change, stop and obtain explicit user confirmation before editing."
+      - "Keep code, tests and OpenSpec artifacts consistent at every completed task."
+      - "Run the current documented verification commands; once setup-foundation provides scripts/verify, use it as the full acceptance entry."
