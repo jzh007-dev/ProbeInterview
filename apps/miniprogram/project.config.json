@@ -1,0 +1,10 @@
+{
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "miniprogram/",
+  "projectname": "ProbeInterview",
+  "setting": {
+    "es6": true,
+    "minified": false
+  }
+}

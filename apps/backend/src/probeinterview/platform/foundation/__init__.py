@@ -1,0 +1,1 @@
+"""Foundation walking-skeleton module."""

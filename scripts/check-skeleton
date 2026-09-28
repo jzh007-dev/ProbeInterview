@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+backend_source="${repo_root}/apps/backend"
+miniprogram_source="${repo_root}/apps/miniprogram"
+
+require_path() {
+  local path="$1"
+  if [[ ! -e "${path}" ]]; then
+    printf 'missing required skeleton path: %s\n' "${path}" >&2
+    exit 1
+  fi
+}
+
+require_path "${backend_source}/pyproject.toml"
+require_path "${backend_source}/uv.lock"
+require_path "${backend_source}/src/probeinterview/__init__.py"
+require_path "${backend_source}/src/probeinterview/platform/foundation/domain/__init__.py"
+require_path "${backend_source}/src/probeinterview/platform/foundation/application/__init__.py"
+require_path "${backend_source}/src/probeinterview/platform/foundation/api/__init__.py"
+require_path "${backend_source}/src/probeinterview/platform/foundation/infrastructure/__init__.py"
+require_path "${miniprogram_source}/package.json"
+require_path "${miniprogram_source}/package-lock.json"
+require_path "${miniprogram_source}/tsconfig.json"
+require_path "${repo_root}/infra/compose"
+
+scratch_dir="$(mktemp -d "${TMPDIR:-/tmp}/probeinterview-skeleton.XXXXXX")"
+trap 'rm -rf "${scratch_dir}"' EXIT
+
+mkdir -p "${scratch_dir}/backend" "${scratch_dir}/miniprogram"
+rsync -a --exclude='.venv' "${backend_source}/" "${scratch_dir}/backend/"
+rsync -a --exclude='node_modules' "${miniprogram_source}/" "${scratch_dir}/miniprogram/"
+
+UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
+  uv sync --project "${scratch_dir}/backend" --frozen --all-groups
+UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
+  uv run --project "${scratch_dir}/backend" --frozen python -c \
+  'import probeinterview; from probeinterview.entrypoints.api import app; from probeinterview.entrypoints.worker import celery_app; assert app.title == "ProbeInterview API"; assert celery_app.main == "probeinterview"'
+
+(
+  cd "${scratch_dir}/miniprogram"
+  npm ci --ignore-scripts
+  npm run typecheck
+)

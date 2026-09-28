@@ -1,0 +1,12 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "backgroundColor": "#f6f7f8",
+    "navigationBarBackgroundColor": "#f6f7f8",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "ProbeInterview"
+  },
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}
