@@ -76,8 +76,8 @@ class UserResumeModel(Base):
         ),
         CheckConstraint("size_bytes >= 0", name="ck_user_resume_size_non_negative"),
         CheckConstraint(
-            "length(content_sha256) = 64",
-            name="ck_user_resume_content_sha256_length",
+            "content_sha256 ~ '^[0-9a-f]{64}$'",
+            name="ck_user_resume_content_sha256_hex",
         ),
         CheckConstraint(
             "length(btrim(storage_object_key)) > 0",

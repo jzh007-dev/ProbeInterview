@@ -135,7 +135,8 @@ def test_profile_schema_contains_only_expected_tables_and_columns(
         "created_at",
         "updated_at",
     }
-    assert {column["name"] for column in inspector.get_columns("user_resume")} == {
+    resume_columns = {column["name"]: column for column in inspector.get_columns("user_resume")}
+    assert set(resume_columns) == {
         "id",
         "user_id",
         "original_file_name",
@@ -147,6 +148,11 @@ def test_profile_schema_contains_only_expected_tables_and_columns(
         "uploaded_at",
         "updated_at",
     }
+    assert resume_columns["uploaded_at"]["nullable"] is False
+    assert resume_columns["uploaded_at"]["type"].timezone is True
+    assert resume_columns["updated_at"]["nullable"] is False
+    assert resume_columns["updated_at"]["type"].timezone is True
+    assert resume_columns["updated_at"]["default"] is not None
 
 
 @pytest.mark.parametrize("owned_table", ["wechat_identities", "candidate_profiles", "user_resume"])
@@ -194,6 +200,50 @@ def test_owned_tables_reject_missing_users(profile_engine: Engine, owned_table: 
     statement, parameters = statements[owned_table]
     with pytest.raises(IntegrityError), profile_engine.begin() as connection:
         connection.execute(text(statement), parameters)
+
+
+@pytest.mark.parametrize("owned_table", ["wechat_identities", "candidate_profiles", "user_resume"])
+def test_owned_tables_restrict_user_deletion(
+    profile_engine: Engine,
+    owned_table: str,
+) -> None:
+    """Changing an owned foreign key to cascade must break this test."""
+
+    user_id = insert_user(profile_engine)
+    if owned_table == "wechat_identities":
+        with profile_engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    insert into wechat_identities (id, user_id, app_id, openid)
+                    values (:id, :user_id, :app_id, :openid)
+                    """
+                ),
+                {
+                    "id": uuid4(),
+                    "user_id": user_id,
+                    "app_id": f"wx-{user_id}",
+                    "openid": f"openid-{user_id}",
+                },
+            )
+    elif owned_table == "candidate_profiles":
+        with profile_engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    insert into candidate_profiles (
+                        id, user_id, target_role, relevant_experience_months, is_default
+                    )
+                    values (:id, :user_id, 'Backend Engineer', 12, false)
+                    """
+                ),
+                {"id": uuid4(), "user_id": user_id},
+            )
+    else:
+        insert_resume(profile_engine, valid_resume_values(user_id))
+
+    with pytest.raises(IntegrityError), profile_engine.begin() as connection:
+        connection.execute(text("delete from users where id = :id"), {"id": user_id})
 
 
 def test_wechat_app_and_openid_pair_is_unique(profile_engine: Engine) -> None:
@@ -281,11 +331,27 @@ def test_resume_is_single_current_row_per_user(profile_engine: Engine) -> None:
         insert_resume(profile_engine, valid_resume_values(user_id))
 
 
+def test_resume_storage_object_key_is_unique(profile_engine: Engine) -> None:
+    """Two users must not claim the same logical stored object."""
+
+    first_user = insert_user(profile_engine)
+    first_values = valid_resume_values(first_user)
+    insert_resume(profile_engine, first_values)
+
+    second_user = insert_user(profile_engine)
+    second_values = valid_resume_values(second_user)
+    second_values["storage_object_key"] = first_values["storage_object_key"]
+
+    with pytest.raises(IntegrityError):
+        insert_resume(profile_engine, second_values)
+
+
 @pytest.mark.parametrize(
     ("field", "invalid_value"),
     [
         ("size_bytes", -1),
         ("content_sha256", "short"),
+        ("content_sha256", "g" * 64),
         ("storage_object_key", "   "),
         ("revision", 0),
     ],
