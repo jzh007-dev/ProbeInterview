@@ -4,7 +4,7 @@
 
 - [x] 1.1 Add shared SQLAlchemy 2 engine/session infrastructure, Alembic configuration, and an isolated PostgreSQL integration-test runner; verify a clean database can upgrade to head and downgrade to base with the focused runner.
 - [x] 1.2 Implement the identity/access and candidate/profile ORM mappings plus the initial revision for `users`, `wechat_identities`, `candidate_profiles`, and `user_resume`; verify PostgreSQL integration tests cover foreign keys, `(app_id, openid)` uniqueness, non-negative numeric checks, one default profile per user, one current resume per user, the `original_file_name`/`media_type`/`size_bytes`/`content_sha256`/`storage_object_key`/`revision`/timestamps contract, and absence of PDF bytes, permanent URL, provider credentials, and `session_key` columns.
-- [ ] 1.3 Add typed `demo_profile_seed_enabled`/`local_actor_id` settings and an idempotent development seed containing one user, WeChat-shaped identity fields, and multiple target profiles with one default but no resume row; verify repeated seed execution produces the same rows, `user_resume` remains empty for the seed user, and production settings reject demo seeding.
+- [x] 1.3 Add typed `demo_profile_seed_enabled`/`local_actor_id` settings and an idempotent development seed containing one user, WeChat-shaped identity fields, and multiple target profiles with one default but no resume row; verify repeated seed execution produces the same rows, `user_resume` remains empty for the seed user, and production settings reject demo seeding.
 
 ## 2. Deliver the owner-scoped overview API
 

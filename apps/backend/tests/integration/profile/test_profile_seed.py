@@ -3,7 +3,6 @@
 import os
 from collections.abc import Iterator
 from pathlib import Path
-from uuid import UUID
 
 import pytest
 from alembic import command
@@ -12,7 +11,9 @@ from sqlalchemy import Engine, text
 
 from probeinterview.entrypoints.profile_seed import (
     DEMO_PROFILE_ID,
+    DEMO_SECONDARY_PROFILE_ID,
     DEMO_USER_ID,
+    DEMO_WECHAT_IDENTITY_ID,
     seed_demo_profile,
 )
 from probeinterview.platform.foundation.infrastructure.persistence import create_engine
@@ -49,88 +50,87 @@ def profile_engine() -> Iterator[Engine]:
         command.downgrade(config, "base")
 
 
-def scalar_count(engine: Engine, statement: str, values: dict[str, UUID]) -> int:
-    """Return a count from the isolated seed database."""
+def seed_snapshot(engine: Engine) -> dict[str, tuple[tuple[object, ...], ...]]:
+    """Capture every row owned by the deterministic seed user."""
 
+    user_values = {"user_id": DEMO_USER_ID}
+    statements = {
+        "users": """
+            select id, nickname, avatar_url
+            from users
+            where id = :user_id
+            order by id
+        """,
+        "wechat_identities": """
+            select id, user_id, app_id, openid, unionid
+            from wechat_identities
+            where user_id = :user_id
+            order by id
+        """,
+        "candidate_profiles": """
+            select id, user_id, target_role, relevant_experience_months, is_default
+            from candidate_profiles
+            where user_id = :user_id
+            order by id
+        """,
+        "user_resume": """
+            select id
+            from user_resume
+            where user_id = :user_id
+            order by id
+        """,
+    }
     with engine.connect() as connection:
-        return int(connection.execute(text(statement), values).scalar_one())
+        return {
+            table: tuple(
+                tuple(row) for row in connection.execute(text(statement), user_values).all()
+            )
+            for table, statement in statements.items()
+        }
 
 
 def test_demo_profile_seed_is_idempotent_and_contains_no_resume(
     profile_engine: Engine,
 ) -> None:
     seed_demo_profile(profile_engine)
+    first_snapshot = seed_snapshot(profile_engine)
+
+    assert first_snapshot == {
+        "users": (
+            (
+                DEMO_USER_ID,
+                "Bao",
+                "https://example.invalid/avatars/bao.png",
+            ),
+        ),
+        "wechat_identities": (
+            (
+                DEMO_WECHAT_IDENTITY_ID,
+                DEMO_USER_ID,
+                "wx8f3c2a1d9e7b6c5a",
+                "oProbeInterviewDemoOpenId01",
+                "uProbeInterviewDemoUnionId1",
+            ),
+        ),
+        "candidate_profiles": (
+            (
+                DEMO_PROFILE_ID,
+                DEMO_USER_ID,
+                "AI 全栈开发",
+                84,
+                True,
+            ),
+            (
+                DEMO_SECONDARY_PROFILE_ID,
+                DEMO_USER_ID,
+                "后端开发",
+                60,
+                False,
+            ),
+        ),
+        "user_resume": (),
+    }
+
     seed_demo_profile(profile_engine)
 
-    user_values = {"user_id": DEMO_USER_ID}
-    assert (
-        scalar_count(
-            profile_engine,
-            "select count(*) from users where id = :user_id",
-            user_values,
-        )
-        == 1
-    )
-    assert (
-        scalar_count(
-            profile_engine,
-            "select count(*) from wechat_identities where user_id = :user_id",
-            user_values,
-        )
-        == 1
-    )
-    assert (
-        scalar_count(
-            profile_engine,
-            "select count(*) from candidate_profiles where user_id = :user_id",
-            user_values,
-        )
-        >= 2
-    )
-    assert (
-        scalar_count(
-            profile_engine,
-            """
-        select count(*)
-        from candidate_profiles
-        where user_id = :user_id and is_default is true
-        """,
-            user_values,
-        )
-        == 1
-    )
-    assert (
-        scalar_count(
-            profile_engine,
-            "select count(*) from user_resume where user_id = :user_id",
-            user_values,
-        )
-        == 0
-    )
-
-    with profile_engine.connect() as connection:
-        identity = connection.execute(
-            text(
-                """
-                select app_id, openid, unionid
-                from wechat_identities
-                where user_id = :user_id
-                """
-            ),
-            user_values,
-        ).one()
-        default_profile_id = connection.execute(
-            text(
-                """
-                select id
-                from candidate_profiles
-                where user_id = :user_id and is_default is true
-                """
-            ),
-            user_values,
-        ).scalar_one()
-
-    assert identity.app_id.startswith("wx")
-    assert identity.openid
-    assert identity.unionid
-    assert default_profile_id == DEMO_PROFILE_ID
+    assert seed_snapshot(profile_engine) == first_snapshot
