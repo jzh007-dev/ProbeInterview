@@ -8,13 +8,19 @@
     "npm": "11.16.x"
   },
   "scripts": {
+    "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "tdesign-miniprogram": "^1.10.1"
   },
   "devDependencies": {
+    "@types/jest": "30.0.0",
+    "jest": "30.5.2",
+    "jest-environment-jsdom": "30.5.2",
     "miniprogram-api-typings": "^4.0.8",
+    "miniprogram-simulate": "1.6.2",
+    "ts-jest": "29.4.14",
     "typescript": "^5.9.2"
   }
 }

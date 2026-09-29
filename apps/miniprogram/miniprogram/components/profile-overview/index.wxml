@@ -1,0 +1,100 @@
+<view class="profile-overview">
+  <view wx:if="{{status == 'loading'}}" class="state-card loading-state">
+    <view class="state-title">正在加载个人概览</view>
+    <view class="state-copy">请稍候</view>
+  </view>
+
+  <view wx:elif="{{status == 'error'}}" class="state-card error-state">
+    <view class="state-title">{{errorMessage}}</view>
+    <view class="state-copy">请检查网络连接后重试</view>
+    <view id="retry-overview" class="retry-action" bindtap="onRetry">重新加载</view>
+  </view>
+
+  <block wx:elif="{{status == 'success' && overview}}">
+    <view class="page-head">
+      <view>
+        <view class="head-kicker">个人中心</view>
+        <view class="page-title">我的</view>
+      </view>
+      <view
+        class="round-action"
+        data-action="open-settings"
+        bindtap="handleAction"
+      >⚙</view>
+    </view>
+
+    <view class="profile-card soft-card">
+      <view class="avatar">
+        <image
+          wx:if="{{overview.avatar_url && !avatarFailed}}"
+          class="avatar-image"
+          src="{{overview.avatar_url}}"
+          mode="aspectFill"
+          binderror="onAvatarError"
+        />
+        <text wx:else>{{initials}}</text>
+      </view>
+      <view class="profile-copy">
+        <view class="profile-name">{{overview.nickname}}</view>
+        <view class="profile-meta">
+          {{experienceLabel}} · {{overview.default_target_profile.target_role}}
+        </view>
+      </view>
+    </view>
+
+    <view class="resume-card mint-card">
+      <view class="section-label">当前简历</view>
+      <view
+        wx:if="{{overview.current_resume}}"
+        id="preview-current-resume"
+        class="resume-row"
+        data-action="preview-current-resume"
+        bindtap="handleAction"
+      >
+        <view>
+          <view class="resume-name">{{overview.current_resume.original_file_name}}</view>
+          <view class="section-copy">只读元数据 · 修订 {{overview.current_resume.revision}}</view>
+        </view>
+        <view class="row-arrow">›</view>
+      </view>
+      <view wx:else class="empty-copy">
+        尚未上传，将在模拟面试时添加
+      </view>
+    </view>
+
+    <view
+      class="history-card soft-card"
+      data-action="open-score-history"
+      bindtap="handleAction"
+    >
+      <view class="section-title">历史成绩</view>
+      <view wx:if="{{overview.recent_scores.length == 0}}" class="empty-copy">
+        暂无面试记录
+      </view>
+    </view>
+
+    <view class="setting-list">
+      <view
+        class="setting-row"
+        data-action="configure-interview-language"
+        bindtap="handleAction"
+      >
+        <text>面试语言</text><text>中文　›</text>
+      </view>
+      <view
+        class="setting-row"
+        data-action="open-privacy-data"
+        bindtap="handleAction"
+      >
+        <text>隐私与数据</text><text>›</text>
+      </view>
+      <view
+        class="setting-row"
+        data-action="open-about"
+        bindtap="handleAction"
+      >
+        <text>关于 ProbeInterview</text><text>›</text>
+      </view>
+    </view>
+  </block>
+</view>

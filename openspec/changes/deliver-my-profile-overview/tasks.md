@@ -15,12 +15,12 @@
 
 ## 3. Deliver the “我的” page states
 
-- [ ] 3.1 Add the locked mini-program test dependencies/scripts, typed overview API client, response types, experience formatter, and avatar-initial fallback; verify `npm test` covers request success/failure mapping, month formatting, and initials without hardcoded seed-user values.
-- [ ] 3.2 Implement the “我的” page structure and styling from `docs/design/visuals/home-overview.html`; verify mini-program tests cover loading, metadata-fixture success, the seed user's “尚未上传，将在模拟面试时添加” state, empty history, error, and retry, and verify the rendered empty states contain no fake resume, score, link, or trend data.
-- [ ] 3.3 Add stable inert actions for settings, existing-resume preview, score history, interview language, privacy/data, and about; verify mini-program tests show `preview-current-resume` only for a non-null resume and assert no navigation, preview, upload/download, database mutation, or other destination behavior.
+- [x] 3.1 Add the locked mini-program test dependencies/scripts, typed overview API client, response types, experience formatter, and avatar-initial fallback; verify `npm test` covers request success/failure mapping, month formatting, and initials without hardcoded seed-user values.
+- [x] 3.2 Implement the “我的” page structure and styling from `docs/design/visuals/home-overview.html`; verify mini-program tests cover loading, metadata-fixture success, the seed user's “尚未上传，将在模拟面试时添加” state, empty history, error, and retry, and verify the rendered empty states contain no fake resume, score, link, or trend data.
+- [x] 3.3 Add stable inert actions for settings, existing-resume preview, score history, interview language, privacy/data, and about; verify mini-program tests show `preview-current-resume` only for a non-null resume and assert no navigation, preview, upload/download, database mutation, or other destination behavior.
 
 ## 4. Complete local navigation and runtime acceptance
 
-- [ ] 4.1 Configure native tab routing in the order 首页、复盘、模拟、上传、我的, add the four empty page shells and tab assets, and keep “我的” as the only implemented business page; verify `app.json`/mini-program tests exercise switching to every tab and loading the profile page from another tab.
+- [x] 4.1 Configure native tab routing in the order 首页、复盘、模拟、上传、我的, add the four empty page shells and tab assets, and keep “我的” as the only implemented business page; verify `app.json`/mini-program tests exercise switching to every tab and loading the profile page from another tab.
 - [ ] 4.2 Add the one-shot database initializer to development/test Compose, disable demo seeding in production configuration, and make API/Worker depend on successful initialization; verify `scripts/test-compose-topology` checks the production service/config boundary, starts an isolated stack, and retrieves the seeded overview with `current_resume: null` through the gateway.
 - [ ] 4.3 Run the complete change acceptance set: `scripts/check-skeleton`, backend unit tests, Ruff format/lint, mypy, the isolated PostgreSQL profile runner, mini-program `npm test` and `npm run typecheck`, and `scripts/test-compose-topology`; then open the local mini program and confirm the five tabs，以及“我的”页面的真实无简历、空历史和错误状态符合已确认的视觉方向。

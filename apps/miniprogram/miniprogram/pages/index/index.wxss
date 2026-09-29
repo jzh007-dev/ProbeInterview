@@ -1,13 +1,21 @@
-.page {
+.page-shell {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  gap: 32rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 20rpx;
   padding: 48rpx;
   box-sizing: border-box;
+  background: linear-gradient(155deg, #f7f7f2, #edf1ee 62%, #f4f0f5);
 }
 
 .title {
   font-size: 48rpx;
-  font-weight: 600;
+  font-weight: 500;
+}
+
+.description {
+  color: #7c8881;
+  font-size: 26rpx;
 }

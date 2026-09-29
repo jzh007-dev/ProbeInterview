@@ -1,12 +1,53 @@
 {
-  "pages": ["pages/index/index"],
+  "pages": [
+    "pages/index/index",
+    "pages/review/index",
+    "pages/simulation/index",
+    "pages/upload/index",
+    "pages/profile/index"
+  ],
   "window": {
     "backgroundColor": "#f6f7f8",
     "navigationBarBackgroundColor": "#f6f7f8",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "ProbeInterview"
   },
-  "usingComponents": {
-    "t-button": "tdesign-miniprogram/button/button"
+  "tabBar": {
+    "color": "#768079",
+    "selectedColor": "#334039",
+    "backgroundColor": "#f7f8f4",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/tabs/home.png",
+        "selectedIconPath": "assets/tabs/home-active.png"
+      },
+      {
+        "pagePath": "pages/review/index",
+        "text": "复盘",
+        "iconPath": "assets/tabs/review.png",
+        "selectedIconPath": "assets/tabs/review-active.png"
+      },
+      {
+        "pagePath": "pages/simulation/index",
+        "text": "模拟",
+        "iconPath": "assets/tabs/simulation.png",
+        "selectedIconPath": "assets/tabs/simulation-active.png"
+      },
+      {
+        "pagePath": "pages/upload/index",
+        "text": "上传",
+        "iconPath": "assets/tabs/upload.png",
+        "selectedIconPath": "assets/tabs/upload-active.png"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的",
+        "iconPath": "assets/tabs/profile.png",
+        "selectedIconPath": "assets/tabs/profile-active.png"
+      }
+    ]
   }
 }

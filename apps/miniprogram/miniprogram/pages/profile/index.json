@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "我的",
+  "usingComponents": {
+    "profile-overview": "/components/profile-overview/index"
+  }
+}
