@@ -27,11 +27,7 @@ HTTP 和 Celery message header 使用 W3C Trace Context：
 - 稳定业务 `job_id` 关联后台任务及其重试；
 - 响应中的 `X-Trace-ID` 只用于诊断展示，不能作为后续请求的父上下文。
 
-合法的外部 `traceparent` 由 OpenTelemetry 自动提取并继续同一 trace，同时为 SERVER span 生成新的 span ID；缺失或无效上下文由 OpenTelemetry 自动创建新的 trace。应用不手写或重新生成合法的 trace ID。公开 HTTP 边界不信任远程 `sampled` 位：production 使用本地配置的采样比例决定 SERVER span 是否记录和导出，随后由服务内部的子 span、Celery producer 和 Worker 继承该本地决定。
-
 后端使用官方 OpenTelemetry Python API/SDK、FastAPI instrumentation、Celery instrumentation 和 OTLP trace exporter。初始化、semantic convention 映射、自定义属性、sampler 和 exporter 只位于 `platform/foundation` infrastructure 边界；domain 和 application 代码不得导入 OpenTelemetry、OTLP 或监控厂商 SDK。
-
-全局 propagator 只启用 W3C Trace Context，不启用 W3C Baggage。入站 `baggage` header 被忽略，不得进入 Celery header、span 或日志。
 
 API 和 Worker resource 至少包含：
 
@@ -45,14 +41,12 @@ API 和 Worker resource 至少包含：
 采样与导出遵循以下规则：
 
 - development 和 test 默认全采样，可使用 in-memory exporter 做确定性断言；
-- production 启用 OTLP 时必须显式配置合法采样比例；公开入口的远程父上下文按本地 trace-id-ratio 策略采样而不继承远程 `sampled` 位，服务内部的本地父子关系使用 parent-based 策略继承本地决定；
+- production 启用 OTLP 时必须显式配置合法采样比例，使用 parent-based trace-id-ratio sampler；
 - 未配置 OTLP endpoint 时不导出 trace，但传播、span/log 关联和业务执行继续工作；
 - OTLP 使用有界批量队列和短超时；队列满、超时或后端拒绝只产生限流后的安全诊断，不得向请求或 Worker 抛出遥测异常；
 - exporter 只接受标准 OTLP 配置，应用代码不感知 ARMS、SLS 或其他具体平台。
 
-结构化日志从当前 span context 读取小写十六进制 `trace_id`、`span_id` 和 `trace_flags`，并在适用时附带 request ID、client action ID、job ID 和上述 service resource。普通日志、span attribute 和 exception event 不记录请求正文、私人来源文本、完整 Prompt 或模型响应、密钥、令牌、连接串、原始异常 message、局部变量或 W3C Baggage 中的身份与业务 payload。
-
-异常诊断保留异常类型、稳定错误码、由模块名/函数名/行号组成的有界安全堆栈帧和稳定 fingerprint。原始 traceback 只用于不进入日志或 exporter 的受控本地调试与测试失败输出。
+结构化日志从当前 span context 读取小写十六进制 `trace_id`、`span_id` 和 `trace_flags`，并在适用时附带 request ID、client action ID、job ID 和上述 service resource。普通日志和 span attribute 不记录请求正文、私人来源文本、完整 Prompt 或模型响应、密钥、令牌、连接串或 W3C Baggage 中的身份与业务 payload。
 
 本决策只建立通用 trace context 与 trace exporter 边界，不定义 Agent run、step、tool、model、Token、成本、评估或回放语义。未来 Agent runtime change 可以复用该上下文，但必须独立定义 Agent 语义。
 

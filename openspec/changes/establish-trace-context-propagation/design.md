@@ -34,8 +34,6 @@ HTTP 与 Celery message header 使用 W3C `traceparent` 和可选 `tracestate`�
 
 FastAPI 接受格式合法的 `traceparent`，无值或无效时由 OpenTelemetry SDK 创建新 trace。外部 `tracestate` 按 W3C 限制验证；不符合限制时丢弃，不能导致请求失败。响应继续返回 `X-Request-ID`，并返回仅用于排障展示的 `X-Trace-ID`；后续请求的传播仍使用 `traceparent`，不能把 `X-Trace-ID` 当作父上下文。
 
-合法外部上下文由 OpenTelemetry 自动提取：继续原 trace ID，并为 SERVER span 生成新的 span ID；缺失或无效上下文由 SDK 自动生成，不由应用手写 `traceparent`。公开 HTTP 边界把远程 `sampled` 位视为不可信输入：production 继续合法 trace 关系，但使用本地配置的采样比例决定 SERVER span 是否记录和导出；服务内部的子 span、Celery producer 和 Worker 再继承该本地决定。
-
 小程序统一请求封装为每次关键用户动作附加 `X-Client-Action-ID`，并允许未来前端监控 adapter 提供标准 `traceparent`/`tracestate`。当前默认实现不自行模拟完整前端 span exporter：没有 provider 时由 API 创建 trace，客户端从响应保存 `X-Request-ID` 与 `X-Trace-ID` 用于错误关联。
 
 使用自定义 `X-Trace-ID` 作为传播协议会失去供应商互操作；立即引入浏览器 OpenTelemetry SDK则没有微信小程序运行时兼容性证据，因此两者均不采用。
@@ -51,8 +49,6 @@ ADR 0007 接受后，backend 锁定兼容版本的：
 - `opentelemetry-exporter-otlp`。
 
 FastAPI instrumentation 创建 SERVER span；Celery instrumentation 在 publish/consume 边界注入和提取 context，并为生产与消费创建相应 span。项目代码只通过 platform/foundation infrastructure 初始化 tracer provider、resource、sampler 和 exporter；domain/application 不导入 OpenTelemetry 或厂商 SDK。
-
-平台初始化显式安装仅包含 W3C Trace Context 的全局 propagator，不启用 W3C Baggage。HTTP 入站 `baggage` 被忽略，Celery publish 也不得把 Baggage 注入消息 header。
 
 自动 instrumentation 与现有 middleware 分工：OpenTelemetry 负责 span 生命周期和标准属性，现有 middleware 负责 request ID、Problem Details 与安全应用日志。测试必须证明不会为同一 HTTP 请求或 Celery 执行重复创建项目自定义根 span。
 
@@ -71,19 +67,17 @@ HTTP、异常和消息属性优先使用当前锁定版本的 OpenTelemetry sema
 
 JSON 日志保留现有安全摘要，并从当前 span context 输出小写十六进制 `trace_id`、`span_id` 和 `trace_flags`；适用时继续输出 request ID、client action ID 和 job ID。日志还输出与 span 一致的 service namespace、name、version 和 environment。Semantic conventions 随锁文件固定，升级时只修改 infrastructure 映射和 schema URL，不让业务模块依赖版本特有字段。
 
-自动或手工异常遥测不得导出原始 exception message、局部变量或包含原始 message 的 traceback。安全诊断只记录异常类型、稳定错误码、由模块名/函数名/行号组成的有界 stack frame 列表和基于这些安全字段生成的 fingerprint；request ID、trace ID 和 job ID 用于关联同一错误的上下文。受控本地调试和测试运行器可以显示原始 traceback，但该输出不得进入结构化日志或 exporter。
-
 ### 4. OTLP 只在 infrastructure 启用且默认关闭
 
 Trace exporter 使用 OTLP，并接受标准 OTEL exporter endpoint、protocol、headers、timeout 和 sampler 配置；项目 Settings 对启用条件和取值做类型化校验。未配置 endpoint 时使用无导出的 provider，trace context、span/log correlation 和测试仍然工作。
 
-Development/test 默认全采样并使用 in-memory exporter 断言；production 只有在显式配置 OTLP 时才启用批量 exporter，并必须显式设置合法采样比例。Sampler 对公开入口的 remote parent 使用本地 trace-id-ratio 决策，不信任远程 `sampled` 位；对本地 parent 使用 parent-based 分支继承服务端决定。Exporter 使用有界队列、批量处理和短超时；队列满、超时或后端拒绝时只产生限流后的安全内部诊断，不向业务请求抛出异常。
+Development/test 默认全采样并使用 in-memory exporter 断言；production 只有在显式配置 OTLP 时才启用批量 exporter，并必须显式设置合法采样比例。Exporter 使用有界队列、批量处理和短超时；队列满、超时或后端拒绝时只产生限流后的安全内部诊断，不向业务请求抛出异常。
 
 本 change 只导出 traces。结构化日志继续写 stdout，由未来部署或平台按需采集；metrics 由独立 change 决定。这样可以验证云平台可移植出口，又不把 Collector 或厂商部署加入当前范围。
 
 ### 5. Celery 重试使用独立尝试 span 和稳定 job 关联
 
-Producer 注入 trace context 时不改变现有“消息只携带稳定 ID”约束。Worker 为每次实际执行建立独立 CONSUMER span。首次 CONSUMER span 以首次 PRODUCER span 为父；发生重试时，retry PRODUCER span 是当前 CONSUMER span 的子 span，下一次 CONSUMER span 再以该 retry PRODUCER span 为父。重试不使用 span link，不覆盖旧 span；各次尝试保持同一 trace ID 和稳定 job ID，并具有不同 span ID。
+Producer 注入 trace context 时不改变现有“消息只携带稳定 ID”约束。Worker 为每次实际执行建立独立 span；重试不是覆盖原 span，而是通过继承或 link 与原后台操作关联，并使用稳定 job ID 将多次尝试聚合。
 
 若消息没有合法上下文，Worker 创建新 trace 并继续执行。Trace 缺失不能成为任务失败原因。Celery task ID 只表示一次队列执行，不替代 PostgreSQL 中未来业务任务的稳定 job ID。
 
@@ -91,7 +85,7 @@ Producer 注入 trace context 时不改变现有“消息只携带稳定 ID”�
 
 小程序新增共享请求模块，负责：
 
-- 接收调用方符合 `^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$` 的 client action ID，或为一次显式用户意图创建 UUID；客户端拒绝无效调用方值，API 对绕过客户端校验的无效 header 只忽略且不写入日志；
+- 接收调用方的 client action ID，或为一次显式用户意图创建安全的本地关联 ID；
 - 注入 `X-Client-Action-ID`，以及可选 provider 返回的 `traceparent`/`tracestate`；
 - 保存响应的 `X-Request-ID` 与 `X-Trace-ID`；
 - 把网络失败、Problem Details 和关联标识映射为不含正文的错误对象；
@@ -101,9 +95,7 @@ Producer 注入 trace context 时不改变现有“消息只携带稳定 ID”�
 
 ## Risks / Trade-offs
 
-- [客户端提供的 trace context 被滥用或格式污染] → 严格按 W3C 解析，拒绝全零/超长/非法值，不把 trace ID 当作身份或授权依据；公开入口不信任远程采样位。
-- [Baggage 携带私人内容跨边界扩散] → 全局只启用 Trace Context propagator，忽略入站 Baggage 并验证 Celery header 不含 Baggage。
-- [异常遥测泄露 message 或 traceback 中的私人内容] → 禁用原始异常事件，改用安全 stack frame、稳定错误码和 fingerprint。
+- [客户端提供的 trace context 被滥用或格式污染] → 严格按 W3C 解析，拒绝全零/超长/非法值，不把 trace ID 当作身份或授权依据。
 - [高基数属性增加监控费用] → ID 只进入 trace/log 关联字段，不进入指标维度；span 名称和公共属性保持低基数。
 - [Exporter 阻塞请求或 Worker] → 默认关闭、批量异步导出、有界队列和短超时，任何导出错误与业务异常隔离。
 - [自动 instrumentation 产生重复或不稳定 span] → 集中初始化一次，并以 in-memory exporter 测试 span 数量、kind 和父子关系。
