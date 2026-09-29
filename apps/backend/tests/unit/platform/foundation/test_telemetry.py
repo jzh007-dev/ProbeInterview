@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 from opentelemetry.trace import SpanKind
 
 from probeinterview.entrypoints.api import create_app
+from probeinterview.entrypoints.worker import create_celery_app
 from probeinterview.platform.foundation.infrastructure.settings import Settings
 
 pytestmark = pytest.mark.asyncio
@@ -48,6 +49,12 @@ async def test_valid_trace_context_creates_one_server_span_with_remote_parent(
     assert server_span.parent is not None
     assert format(server_span.parent.span_id, "016x") == _PARENT_SPAN_ID
     assert server_span.parent.trace_state.get("vendor") == "value"
+    assert dict(server_span.resource.attributes) | {
+        "service.namespace": "probeinterview",
+        "service.name": "probeinterview-api",
+        "service.version": "0.1.0",
+        "deployment.environment.name": "test",
+    } == dict(server_span.resource.attributes)
 
     completed = next(
         event
@@ -85,6 +92,8 @@ async def test_missing_or_invalid_trace_context_creates_new_trace(
     assert response_trace_id != "0" * 32
     assert response_trace_id == format(server_span.context.trace_id, "032x")
     assert server_span.parent is None
+    root_spans = [span for span in exporter.get_finished_spans() if span.parent is None]
+    assert root_spans == [server_span]
 
 
 async def test_public_http_boundary_ignores_remote_sampled_flag() -> None:
@@ -147,6 +156,46 @@ async def test_problem_details_response_keeps_trace_diagnostics() -> None:
     assert response.headers["X-Trace-ID"] == _TRACE_ID
 
 
+async def test_query_values_are_excluded_from_span_telemetry() -> None:
+    exporter = InMemorySpanExporter()
+    private_query = "PRIVATE_QUERY_SENTINEL"
+
+    async with client_for_app(make_app(exporter)) as client:
+        response = await client.get(f"/health/live?token={private_query}")
+
+    assert response.status_code == 200
+    assert private_query not in exported_telemetry(exporter)
+
+
+async def test_exception_messages_and_tracebacks_are_excluded_from_spans() -> None:
+    exporter = InMemorySpanExporter()
+    private_message = "PRIVATE_EXCEPTION_SENTINEL"
+    app = make_app(exporter)
+
+    @app.get("/test/private-exception")
+    async def raise_private_exception() -> None:
+        raise RuntimeError(private_message)
+
+    async with client_for_app(app) as client:
+        response = await client.get("/test/private-exception")
+
+    assert response.status_code == 500
+    assert private_message not in exported_telemetry(exporter)
+    assert "Traceback" not in exported_telemetry(exporter)
+
+
+async def test_worker_telemetry_uses_stable_service_resource() -> None:
+    celery_app = create_celery_app(settings=make_test_settings())
+    telemetry = celery_app.probeinterview_telemetry
+
+    assert telemetry.resource.attributes() == {
+        "service.namespace": "probeinterview",
+        "service.name": "probeinterview-worker",
+        "service.version": "0.1.0",
+        "deployment.environment.name": "test",
+    }
+
+
 def make_app(exporter: InMemorySpanExporter) -> FastAPI:
     return create_app(
         settings=make_test_settings(),
@@ -197,3 +246,22 @@ def production_settings(**overrides: object) -> Settings:
 
 def json_log_events(output: str) -> list[dict[str, object]]:
     return [json.loads(line) for line in output.splitlines() if line.strip()]
+
+
+def exported_telemetry(exporter: InMemorySpanExporter) -> str:
+    exported = []
+    for span in exporter.get_finished_spans():
+        exported.append(
+            {
+                "name": span.name,
+                "attributes": dict(span.attributes or {}),
+                "events": [
+                    {
+                        "name": event.name,
+                        "attributes": dict(event.attributes or {}),
+                    }
+                    for event in span.events
+                ],
+            }
+        )
+    return json.dumps(exported, sort_keys=True)

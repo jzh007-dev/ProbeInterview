@@ -1,7 +1,10 @@
 """Vendor-neutral OpenTelemetry initialization for ProbeInterview runtimes."""
 
 from dataclasses import dataclass
+from typing import Any
 
+from fastapi import FastAPI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -14,6 +17,7 @@ from opentelemetry.sdk.trace.sampling import (
     TraceIdRatioBased,
 )
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from opentelemetry.trace.span import Span
 
 from probeinterview.platform.foundation.infrastructure.settings import Settings
 
@@ -95,3 +99,39 @@ def build_sampler(settings: Settings) -> Sampler:
         local_parent_sampled=ALWAYS_ON,
         local_parent_not_sampled=ALWAYS_OFF,
     )
+
+
+def instrument_fastapi_app(app: FastAPI, telemetry: TelemetryRuntime) -> None:
+    """Instrument FastAPI once with infrastructure-owned privacy controls."""
+
+    FastAPIInstrumentor.instrument_app(
+        app,
+        tracer_provider=telemetry.tracer_provider,
+        server_request_hook=_sanitize_server_request_span,
+        exclude_spans=["receive", "send"],
+    )
+
+
+def _sanitize_server_request_span(span: Span, scope: dict[str, Any]) -> None:
+    """Strip query values from legacy and current HTTP URL attributes."""
+
+    if not span.is_recording():
+        return
+
+    path = str(scope.get("path") or "/")
+    root_path = str(scope.get("root_path") or "")
+    safe_path = f"{root_path}{path}"
+    scheme = str(scope.get("scheme") or "http")
+    server = scope.get("server")
+    if isinstance(server, tuple) and len(server) == 2:
+        host, port = server
+        default_port = 443 if scheme == "https" else 80
+        authority = str(host) if port in (None, default_port) else f"{host}:{port}"
+        safe_url = f"{scheme}://{authority}{safe_path}"
+    else:
+        safe_url = safe_path
+
+    span.set_attribute("http.url", safe_url)
+    span.set_attribute("http.target", safe_path)
+    span.set_attribute("url.full", safe_url)
+    span.set_attribute("url.query", "")

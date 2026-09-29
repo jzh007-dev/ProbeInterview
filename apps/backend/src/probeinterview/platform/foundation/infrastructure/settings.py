@@ -1,5 +1,6 @@
 """Typed runtime configuration and startup validation."""
 
+from importlib.metadata import version
 from typing import Literal, Self
 
 from pydantic import Field, SecretStr, model_validator
@@ -8,6 +9,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 Environment = Literal["development", "test", "production"]
 ObjectStorageAdapter = Literal["fake", "oss"]
 ModelAdapter = Literal["fake", "bailian"]
+
+
+def _installed_service_version() -> str:
+    return version("probeinterview-backend")
 
 
 def _is_blank(value: str | SecretStr | None) -> bool:
@@ -38,7 +43,7 @@ class Settings(BaseSettings):
     embedding_adapter: ModelAdapter = "fake"
     structured_llm_adapter: ModelAdapter = "fake"
 
-    service_version: str = Field(default="0.1.0", min_length=1)
+    service_version: str = Field(default_factory=_installed_service_version, min_length=1)
     telemetry_trace_sample_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
 
     oss_endpoint: str | None = None
