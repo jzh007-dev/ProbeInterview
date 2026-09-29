@@ -3,7 +3,6 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
 
 from probeinterview.platform.foundation.infrastructure.persistence import (
     Base,
@@ -18,11 +17,24 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def database_url() -> str:
+    """Read URLs without ConfigParser interpolation of percent-encoded values."""
+
+    attribute_url = config.attributes.get("database_url")
+    if isinstance(attribute_url, str):
+        return attribute_url
+
+    configured_url = config.get_main_option("sqlalchemy.url")
+    if configured_url is None:
+        raise RuntimeError("Alembic requires a database URL")
+    return configured_url
+
+
 def run_migrations_offline() -> None:
     """Run migrations without creating a database connection."""
 
     context.configure(
-        url=config.get_main_option("sqlalchemy.url"),
+        url=database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -35,7 +47,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations with the shared SQLAlchemy engine configuration."""
 
-    connectable = create_engine(config.get_main_option("sqlalchemy.url"))
+    connectable = create_engine(database_url())
 
     with connectable.connect() as connection:
         context.configure(
