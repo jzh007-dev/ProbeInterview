@@ -14,7 +14,6 @@ ADR 只追加、不静默改写。若未来推翻已接受的决策，应创建�
 | [0004](0004-api-and-identity-boundary.md) | Accepted | HTTP API、幂等、错误格式及 `ActorContext` 边界 | `setup-foundation` 及全部 API changes |
 | [0005](0005-deployment-and-runtime-operations.md) | Accepted | 单 ECS + Docker Compose + Caddy，以及配置和日志规范 | `setup-foundation` 及部署运行 |
 | [0006](0006-external-adapters-and-verification-strategy.md) | Accepted | 外部服务端口、确定性 fake 及统一自动验证入口 | `setup-foundation` 及云服务接入 changes |
-| [0007](0007-w3c-trace-context-and-opentelemetry.md) | Accepted | W3C Trace Context、OpenTelemetry Python、可选 OTLP 导出及遥测隐私边界 | `establish-trace-context-propagation` 及后续跨运行单元 changes |
 
 ## Deliberately deferred decisions
 
@@ -26,3 +25,4 @@ ADR 只追加、不静默改写。若未来推翻已接受的决策，应创建�
 - LLM 知识关联的候选阈值、置信度和人工复核策略；
 - Rerank 模型及进入模拟面试题库的质量门槛；
 - 托管 CI 平台；无论平台如何选择，都必须调用统一的根级验证入口。
+

@@ -16,7 +16,6 @@ context: |
   - Client: native WeChat mini program, TypeScript, TDesign.
   - Data: PostgreSQL + pgvector. PostgreSQL is the business source of truth.
   - Jobs: Redis + Celery; messages carry IDs and workers reload versioned inputs.
-  - Telemetry: W3C Trace Context + OpenTelemetry Python; OTLP trace export is optional and isolated in infrastructure.
   - Edge/deployment: Caddy, Docker Compose, single Alibaba Cloud ECS for MVP.
   - External services: Alibaba Cloud OSS and Bailian behind application ports.
   - Verification: pytest, Ruff, mypy, Jest + miniprogram-simulate, Compose E2E.
@@ -29,8 +28,6 @@ context: |
   - ActorContext and owner/public scope filters are applied before record or vector retrieval.
   - Success APIs return typed resources; errors use RFC 9457 Problem Details.
   - Async creation uses HTTP 202 + Location; retryable commands use Idempotency-Key.
-  - HTTP and Celery propagate W3C trace context; request ID, client action ID and job ID remain independent correlation identifiers.
-  - OpenTelemetry and OTLP configuration stay in platform/foundation infrastructure; telemetry failure must not change business results.
   - Logs are structured and exclude private source text, request bodies, prompts, secrets and tokens.
 
   Commands:
