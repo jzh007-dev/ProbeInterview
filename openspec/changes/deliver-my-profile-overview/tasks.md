@@ -11,7 +11,7 @@
 - [x] 2.1 Implement `ActorContext`, the configuration-backed development/test local actor provider, and the current-actor FastAPI dependency; verify backend unit/API tests cover configured resolution, no actor header support, `401` Problem Details when unresolved, and production refusal.
 - [x] 2.2 Implement identity display and candidate overview application contracts, owner-scoped PostgreSQL repositories, typed response schemas, and `GET /api/v1/me/overview`; verify API tests cover the seed response with `current_resume: null`, a metadata-fixture response exposing only display-safe resume fields, `recent_scores: []`, explicit default-profile selection, no storage key/hash/URL leakage, and `409 profile_overview_incomplete` when no default exists.
 - [x] 2.3 Add PostgreSQL-backed two-actor API tests that use separate configured app instances against shared fixtures; verify each actor receives only its own user/profile/resume data and an actor without a resume cannot observe the other actor's resume.
-- [ ] 2.4 Document the migration, no-resume seed, local actor, and `curl /api/v1/me/overview` workflow in `docs/development.md`, including that file storage/upload/preview belongs to the later simulation feature; verify every documented command runs as written against the development environment.
+- [x] 2.4 Document the migration, no-resume seed, local actor, and `curl /api/v1/me/overview` workflow in `docs/development.md`, including that file storage/upload/preview belongs to the later simulation feature; verify every documented command runs as written against the development environment.
 
 ## 3. Deliver the “我的” page states
 
@@ -22,5 +22,5 @@
 ## 4. Complete local navigation and runtime acceptance
 
 - [x] 4.1 Configure native tab routing in the order 首页、复盘、模拟、上传、我的, add the four empty page shells and tab assets, and keep “我的” as the only implemented business page; verify `app.json`/mini-program tests exercise switching to every tab and loading the profile page from another tab.
-- [ ] 4.2 Add the one-shot database initializer to development/test Compose, disable demo seeding in production configuration, and make API/Worker depend on successful initialization; verify `scripts/test-compose-topology` checks the production service/config boundary, starts an isolated stack, and retrieves the seeded overview with `current_resume: null` through the gateway.
+- [x] 4.2 Add the one-shot database initializer to development/test Compose, disable demo seeding in production configuration, and make API/Worker depend on successful initialization; verify `scripts/test-compose-topology` checks the production service/config boundary, starts an isolated stack, and retrieves the seeded overview with `current_resume: null` through the gateway.
 - [ ] 4.3 Run the complete change acceptance set: `scripts/check-skeleton`, backend unit tests, Ruff format/lint, mypy, the isolated PostgreSQL profile runner, mini-program `npm test` and `npm run typecheck`, and `scripts/test-compose-topology`; then open the local mini program and confirm the five tabs，以及“我的”页面的真实无简历、空历史和错误状态符合已确认的视觉方向。

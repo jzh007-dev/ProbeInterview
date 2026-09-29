@@ -10,3 +10,13 @@ services:
   worker:
     environment:
       PROBEINTERVIEW_ENVIRONMENT: test
+
+  database-initializer:
+    environment:
+      PROBEINTERVIEW_ENVIRONMENT: test
+
+  postgres:
+    ports: !override []
+
+  redis:
+    ports: !override []

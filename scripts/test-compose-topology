@@ -52,9 +52,16 @@ import sys
 
 config = json.loads(pathlib.Path(sys.argv[1]).read_text())
 services = config["services"]
-assert set(services) == {"api", "caddy", "postgres", "redis", "worker"}
+assert set(services) == {
+    "api",
+    "caddy",
+    "database-initializer",
+    "postgres",
+    "redis",
+    "worker",
+}
 
-for service_name in ("api", "postgres", "redis", "worker"):
+for service_name in ("api", "database-initializer", "postgres", "redis", "worker"):
     assert not services[service_name].get("ports"), service_name
 
 caddy_ports = {
@@ -78,6 +85,7 @@ expected_backend_environment = {
     ),
     "PROBEINTERVIEW_CELERY_BROKER_URL": "redis://redis:6379/0",
     "PROBEINTERVIEW_LOCAL_ACTOR_ENABLED": "false",
+    "PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED": "false",
     "PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED": "false",
     "PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER": "oss",
     "PROBEINTERVIEW_EMBEDDING_ADAPTER": "bailian",
@@ -88,10 +96,20 @@ expected_backend_environment = {
     "PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET": "test-access-secret",
     "PROBEINTERVIEW_BAILIAN_API_KEY": "test-bailian-key",
 }
-for service_name in ("api", "worker"):
+for service_name in ("api", "database-initializer", "worker"):
     environment = services[service_name]["environment"]
     for key, value in expected_backend_environment.items():
         assert environment[key] == value, (service_name, key, environment[key])
+
+for service_name in ("api", "worker"):
+    assert (
+        services[service_name]["depends_on"]["database-initializer"]["condition"]
+        == "service_completed_successfully"
+    )
+assert (
+    services["database-initializer"]["depends_on"]["postgres"]["condition"]
+    == "service_healthy"
+)
 
 assert (
     services["postgres"]["environment"]["POSTGRES_PASSWORD"]
@@ -144,7 +162,7 @@ PROBEINTERVIEW_TEST_PORT="${test_port}" docker compose "${compose_args[@]}" \
   up --build --detach --wait --wait-timeout 180
 
 PROBEINTERVIEW_TEST_PORT="${test_port}" docker compose "${compose_args[@]}" \
-  ps --format json >"${status_file}"
+  ps --all --format json >"${status_file}"
 
 python3 - "${status_file}" <<'PY'
 import json
@@ -155,18 +173,29 @@ raw = pathlib.Path(sys.argv[1]).read_text().strip()
 records = json.loads(raw) if raw.startswith("[") else [
     json.loads(line) for line in raw.splitlines() if line
 ]
-expected = {"api", "caddy", "postgres", "redis", "worker"}
+expected = {"api", "caddy", "database-initializer", "postgres", "redis", "worker"}
 actual = {record["Service"] for record in records}
 assert actual == expected, (actual, expected)
 unhealthy = {
     record["Service"]: record.get("Health")
     for record in records
-    if record.get("Health") != "healthy"
+    if record["Service"] != "database-initializer"
+    and record.get("Health") != "healthy"
 }
 assert not unhealthy, unhealthy
+initializer = next(
+    record for record in records if record["Service"] == "database-initializer"
+)
+assert initializer["State"] == "exited", initializer
+assert initializer["ExitCode"] == 0, initializer
 PY
 
 curl --fail --silent --show-error \
   "http://127.0.0.1:${test_port}/health/ready" \
   | python3 -c \
     'import json, sys; assert json.load(sys.stdin) == {"status": "ready", "dependencies": {"database": "available", "task_queue": "available"}}'
+
+curl --fail --silent --show-error \
+  "http://127.0.0.1:${test_port}/api/v1/me/overview" \
+  | python3 -c \
+    'import json, sys; data = json.load(sys.stdin); assert data["nickname"] == "Bao"; assert data["current_resume"] is None; assert data["recent_scores"] == []'

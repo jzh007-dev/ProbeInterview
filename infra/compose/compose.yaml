@@ -5,6 +5,8 @@ x-backend-environment: &backend-environment
   PROBEINTERVIEW_DATABASE_URL: postgresql+psycopg://probeinterview:probeinterview@postgres:5432/probeinterview
   PROBEINTERVIEW_CELERY_BROKER_URL: redis://redis:6379/0
   PROBEINTERVIEW_LOCAL_ACTOR_ENABLED: "true"
+  PROBEINTERVIEW_LOCAL_ACTOR_ID: 018f7f64-3c6a-7d21-95a8-4d1b8c2e1001
+  PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED: "true"
   PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED: "true"
   PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER: fake
   PROBEINTERVIEW_EMBEDDING_ADAPTER: fake
@@ -43,6 +45,11 @@ services:
 
   api:
     <<: *backend-service
+    depends_on:
+      database-initializer:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     command:
       - uvicorn
       - probeinterview.entrypoints.api:create_app
@@ -66,6 +73,11 @@ services:
 
   worker:
     <<: *backend-service
+    depends_on:
+      database-initializer:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     hostname: worker
     command: ["python", "-m", "probeinterview.entrypoints.worker"]
     healthcheck:
@@ -80,12 +92,26 @@ services:
       retries: 20
       start_period: 10s
 
+  database-initializer:
+    image: probeinterview-backend:local
+    build:
+      context: ../../apps/backend
+      dockerfile: Dockerfile
+    environment: *backend-environment
+    command: ["python", "-m", "probeinterview.entrypoints.database_initializer"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   postgres:
     image: pgvector/pgvector:0.8.1-pg17
     environment:
       POSTGRES_DB: probeinterview
       POSTGRES_PASSWORD: probeinterview
       POSTGRES_USER: probeinterview
+    ports:
+      - "127.0.0.1:${PROBEINTERVIEW_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -99,6 +125,8 @@ services:
   redis:
     image: redis:8.2.1-alpine
     command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${PROBEINTERVIEW_REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:

@@ -3,6 +3,7 @@ x-production-backend-environment: &production-backend-environment
   PROBEINTERVIEW_DATABASE_URL: "${PROBEINTERVIEW_DATABASE_URL:?set PROBEINTERVIEW_DATABASE_URL}"
   PROBEINTERVIEW_CELERY_BROKER_URL: "${PROBEINTERVIEW_CELERY_BROKER_URL:?set PROBEINTERVIEW_CELERY_BROKER_URL}"
   PROBEINTERVIEW_LOCAL_ACTOR_ENABLED: "false"
+  PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED: "false"
   PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED: "false"
   PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER: oss
   PROBEINTERVIEW_EMBEDDING_ADAPTER: bailian
@@ -32,9 +33,16 @@ services:
   worker:
     environment: *production-backend-environment
 
+  database-initializer:
+    environment: *production-backend-environment
+
   postgres:
     environment:
       POSTGRES_PASSWORD: "${PROBEINTERVIEW_POSTGRES_PASSWORD:?set PROBEINTERVIEW_POSTGRES_PASSWORD}"
+    ports: !override []
+
+  redis:
+    ports: !override []
 
 volumes:
   caddy-data:
