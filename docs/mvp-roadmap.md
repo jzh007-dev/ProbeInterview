@@ -1,6 +1,6 @@
 # ProbeInterview MVP 项目路线图
 
-更新时间：2026-09-28
+更新时间：2026-09-29
 
 ## 1. 文档目的
 
@@ -26,42 +26,56 @@
 
 ```mermaid
 flowchart LR
-    SF["1. setup-foundation<br/>Active"] --> IKS["2. ingest-knowledge-sources<br/>Planned"]
-    IKS --> AKC["3. associate-knowledge-concepts<br/>Planned"]
-    AKC --> GKC["4. generate-knowledge-cards<br/>Planned"]
-    GKC --> BKL["5. browse-knowledge-library<br/>Planned"]
-    BKL --> FUT["未来面试能力<br/>尚未完成 change 级拆分"]
+    BASE["Foundation + Profile<br/>Archived"] --> HKO["1. deliver-home-knowledge-overview<br/>Active"]
+    HKO --> MKS["2. ingest-markdown-knowledge-sources<br/>Planned"]
+    MKS --> RKT["3. establish-role-knowledge-topics<br/>Planned"]
+    RKT --> PMS["4. parse-markdown-knowledge-sources<br/>Planned"]
+    PMS --> APC["5. associate-or-propose-knowledge-concepts<br/>Planned"]
+    APC --> RPK["6. review-and-publish-public-knowledge<br/>Planned"]
+    RPK --> ORQ["7. observe-rag-quality<br/>Planned"]
+    ORQ --> RHT["8. serve-role-aware-home-topics<br/>Planned"]
+    RHT --> FUT["知识卡片与模拟面试召回<br/>待后续拆分"]
 
     REF["deliver-probeinterview-mvp<br/>Reference only，禁止直接实施"]
-    LARGE["add-knowledge-card<br/>等待拆分，禁止直接实施"]
+    LARGE["add-knowledge-card<br/>Reference only，禁止直接实施"]
 
+    classDef archived fill:#f3f4f6,stroke:#6b7280,color:#374151;
     classDef active fill:#dcfce7,stroke:#15803d,color:#14532d;
     classDef planned fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
     classDef reference fill:#f3f4f6,stroke:#6b7280,color:#374151,stroke-dasharray: 5 5;
-    class SF active;
-    class IKS,AKC,GKC,BKL,FUT planned;
+    class BASE archived;
+    class HKO active;
+    class MKS,RKT,PMS,APC,RPK,ORQ,RHT,FUT planned;
     class REF,LARGE reference;
 ```
 
-`deliver-probeinterview-mvp` 和 `add-knowledge-card` 在图中是治理提示，不是可实施节点，也不是实线依赖。
+知识上传 MVP 的整体共识记录在
+[knowledge-upload-mvp-overview.md](knowledge-upload-mvp-overview.md)。该文档解释方向，不替代各 change 的 OpenSpec artifacts。
 
 ## 4. 执行顺序
 
-当前唯一允许开始实施的 change 是 `setup-foundation`。每个后续 change 只有在所有依赖 change 均为 `Archived`、自身 OpenSpec artifacts 已确认且不存在阻塞实施的 Open 项时，才可进入 `Active`。
+`setup-foundation`、`establish-runtime-api-foundation`、`establish-trace-context-propagation` 和 `deliver-my-profile-overview` 已归档。当前只允许 `deliver-home-knowledge-overview` 进入实施；每个后续 change 只有在前置 change 已归档、自身 artifacts 已确认且不存在阻塞实施的 Open 项时，才可进入 `Active`。
 
 | change / 阶段 | 状态 | 一句话范围 | 依赖项 | 进入条件 | 完成条件 |
 |---|---|---|---|---|---|
 | `deliver-probeinterview-mvp` | Reference | 保留完整 MVP 需求与场景作为追溯材料，不采用其旧技术方案 | 无 | 仅在拆分或核对需求时读取 | 不直接实施；后续 change 对所需需求完成归属与覆盖 |
-| `add-knowledge-card` | Planned（等待拆分） | 作为知识导入、关联、卡片和浏览能力的拆分来源 | `setup-foundation` 提供基础约束 | 拆分方案与需求归属获得用户明确确认 | 四个后续知识 change 的 artifacts 和需求对账完成；本 change 仍不得直接实施 |
-| `setup-foundation` | **Active** | 建立小程序、API、数据库、队列、Worker、pgvector 与统一验证入口的最薄 walking skeleton | 无 | 规划已完成且无阻塞 Open 项 | 12/12 tasks 完成；全部 scenarios 有自动化覆盖；运行与验证命令已文档化；change 已归档 |
-| `ingest-knowledge-sources` | Planned | 接收并解析 XMind/Markdown，保存 owner-scoped 原始来源、不可变版本、树/片段、状态、重试与删除生命周期 | `setup-foundation` | 前置 change 已归档；本 change 的 proposal/specs/design/tasks 已确认并通过校验；文件限制与处理预算无阻塞项 | 来源与版本全生命周期及权限场景通过自动化验收；change 已归档 |
-| `associate-knowledge-concepts` | Planned | 将可见来源片段映射到稳定知识概念和统一主题，处理新增、相同、扩展、冲突及人工确认 | `ingest-knowledge-sources` | 前置 change 已归档；切分、Embedding、索引、候选阈值和确认策略已在本 change 中确认 | 关联准确性、冲突处理、版本复用和 owner 前置过滤均有自动化覆盖；change 已归档 |
-| `generate-knowledge-cards` | Planned | 从已确认概念与来源生成可追溯、版本化、可编辑且明确标注 AI 补全/冲突的知识卡片 | `associate-knowledge-concepts` | 前置 change 已归档；卡片结构、溯源粒度、人工编辑覆盖和公共发布规则无阻塞项 | 来源优先生成、版本更新、人工编辑、公共确认和冲突保留场景通过；change 已归档 |
-| `browse-knowledge-library` | Planned | 提供统一主题、首页卡片、详情、学习状态及受 scope 约束的关键词/向量搜索 | `generate-knowledge-cards` | 前置 change 已归档；浏览、搜索、学习状态与 UI 状态已形成已确认 change | 浏览、搜索、学习状态、归档过滤和跨 owner 隔离场景通过；change 已归档 |
+| `add-knowledge-card` | Reference | 保留早期知识卡片设想作为追溯材料，不直接实施 | 无 | 仅在拆分或核对需求时读取 | 不直接实施 |
+| `setup-foundation` | Archived | 建立 monorepo、类型化配置和最小工程骨架 | 无 | 已完成 | 已归档 |
+| `establish-runtime-api-foundation` | Archived | 建立 API、Worker、PostgreSQL、Redis、网关和基础协议 | `setup-foundation` | 已完成 | 已归档 |
+| `establish-trace-context-propagation` | Archived | 建立 request、trace 和 job 上下文传播基础 | `establish-runtime-api-foundation` | 已完成 | 已归档 |
+| `deliver-my-profile-overview` | Archived | 建立当前用户、默认目标岗位、owner 隔离和五 tab 页面骨架 | runtime foundation | 已完成 | 已归档 |
+| `deliver-home-knowledge-overview` | **Active** | 按视觉稿实现首页；昵称读取真实概览，其余内容使用确定性 fake | `deliver-my-profile-overview` | artifacts 已确认并通过校验 | 加载、成功、错误、fake 内容和无副作用交互均有自动化覆盖；change 已归档 |
+| `ingest-markdown-knowledge-sources` | Planned | 真实上传 Markdown 到 OSS，保存统一 public/private 来源、版本、能力、配额和列表状态 | `deliver-home-knowledge-overview` | 前置 change 已归档；OSS adapter、500 KiB 校验、每日 2 文件配额和保留策略已确认 | 上传、重复、配额、权限、owner 隔离和存储失败场景通过；change 已归档 |
+| `establish-role-knowledge-topics` | Planned | 建立六个主题、稳定岗位及知识点岗位映射结构，不预置业务知识点 | `ingest-markdown-knowledge-sources` | 前置 change 已归档；主题和岗位模型已确认 | 主题、岗位归一化、映射版本和 capability 场景通过；change 已归档 |
+| `parse-markdown-knowledge-sources` | Planned | 异步解析 Markdown 标题层级和章节，维护处理与发布状态及重试 | `establish-role-knowledge-topics` | 前置 change 已归档；解析边界和资源预算已确认 | 确定性解析、幂等、失败恢复、状态和清理场景通过；change 已归档 |
+| `associate-or-propose-knowledge-concepts` | Planned | 受控 Agent 使用别名、pgvector 和结构化 LLM 关联已有知识点或提出新知识点 | `parse-markdown-knowledge-sources` | 前置 change 已归档；模型、Prompt、confidence 校准和 eval 入口已确认 | 关联、新建提议、冲突、scope、trace-lite、eval 和 badcase 场景通过；change 已归档 |
+| `review-and-publish-public-knowledge` | Planned | reviewer 在小程序确认公共关联、新知识点和冲突并驱动 ACTIVE 发布 | `associate-or-propose-knowledge-concepts` | 前置 change 已归档；审核动作和发布门槛已确认 | capability、审核决策、幂等发布和审计场景通过；change 已归档 |
+| `observe-rag-quality` | Planned | 为 reviewer 展示 confidence 校准、准确率、badcase、版本、费用和延迟 | `review-and-publish-public-knowledge` | 已有真实审核数据和版本化 run 数据 | 指标口径、版本对比和 owner/管理员权限场景通过；change 已归档 |
+| `serve-role-aware-home-topics` | Planned | 用当前 target role、可见 scope 和 ACTIVE 关联替换首页“按主题学习”fake 数据 | `observe-rag-quality` | 前置 change 已归档；首页统计口径已确认 | 真实分类、去重计数、岗位过滤、空态和跨 owner 隔离通过；change 已归档 |
 
 ## 5. 顺序与并行原则
 
-知识卡片阶段不安排 change 级并行：导入阶段定义来源与版本真相；关联阶段消费来源片段并产生稳定概念；生成阶段消费已确认概念；浏览阶段消费已发布卡片与有效索引。任何阶段提前实施都会依赖尚未归档的数据契约或未确认的 RAG 参数。
+知识上传阶段不安排 change 级并行：首页视觉先建立已确认页面边界；导入定义来源和权限真相；主题与岗位定义稳定分类；解析产生版本化章节；关联消费章节并产生概念；审核决定公共发布；质量页消费真实审核结果；最后首页消费 ACTIVE 知识读模型。任何阶段提前实施都会依赖尚未归档的数据契约。
 
 可以在单个 change 内按其 tasks 安排独立工作的并行开发，但不得绕过“前置 change 已归档”的实施门槛。未来面试能力是否可并行，必须等 change 级拆分和依赖确认后再决定。
 
