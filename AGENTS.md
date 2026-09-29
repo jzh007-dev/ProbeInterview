@@ -49,7 +49,7 @@ Available setup and focused-check commands:
 - mini-program install: `cd apps/miniprogram && npm ci`;
 - clean-room skeleton check: `scripts/check-skeleton`;
 - backend unit tests: `cd apps/backend && uv run pytest tests/unit`;
-- backend format/lint/type checks: `cd apps/backend && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy`;
+- backend format/lint/type checks: `cd apps/backend && uv run ruff format --check migrations src tests && uv run ruff check migrations src tests && uv run mypy`;
 - mini-program type check: `cd apps/miniprogram && npm run typecheck`;
 - Compose topology check: `scripts/test-compose-topology`;
 - local API and Worker startup: see `docs/development.md`.

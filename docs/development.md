@@ -101,8 +101,8 @@ scripts/test-compose-topology
 
 cd apps/backend
 uv run pytest tests/unit
-uv run ruff format --check src tests
-uv run ruff check src tests
+uv run ruff format --check migrations src tests
+uv run ruff check migrations src tests
 uv run mypy
 
 cd ../miniprogram
