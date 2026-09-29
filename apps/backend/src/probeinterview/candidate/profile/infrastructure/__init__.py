@@ -1,0 +1,1 @@
+"""Candidate profile persistence adapters."""

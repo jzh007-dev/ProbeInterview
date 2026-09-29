@@ -1,5 +1,6 @@
 """Alembic environment backed by the shared persistence infrastructure."""
 
+from importlib import import_module
 from logging.config import fileConfig
 
 from alembic import context
@@ -15,6 +16,12 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+for model_module in (
+    "probeinterview.identity.access.infrastructure.models",
+    "probeinterview.candidate.profile.infrastructure.models",
+):
+    import_module(model_module)
 
 
 def database_url() -> str:
