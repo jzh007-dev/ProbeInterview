@@ -3,7 +3,7 @@
 ## 1. 固定标准并交付 HTTP Trace
 
 - [x] 1.1 新增并接受 ADR 0007，确认 W3C Trace Context、OpenTelemetry Python/OTLP、采样、隐私和供应商隔离边界，同步 `docs/architecture.md`、`docs/adr/README.md` 与 `openspec/config.yaml`；以文档对账和 `openspec validate establish-trace-context-propagation --strict` 验证规划与架构约束一致
-- [ ] 1.2 在 ADR 0007 接受后锁定 OpenTelemetry backend 依赖，实现类型化 telemetry 配置、resource/sampler/provider 初始化、仅 Trace Context 的 propagator、FastAPI SERVER span、合法/缺失/无效 `traceparent` 处理、公开入口不信任远程采样位、独立 `X-Request-ID`、诊断用 `X-Trace-ID`、受限 `X-Client-Action-ID` 和标准日志关联字段；以 `cd apps/backend && uv run pytest tests/unit && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy` 验证正常请求、Problem Details、无效上下文、伪造采样位、Baggage 被忽略、安全异常 stack/fingerprint、敏感字段排除和单一根 span
+- [x] 1.2 在 ADR 0007 接受后锁定 OpenTelemetry backend 依赖，实现类型化 telemetry 配置、resource/sampler/provider 初始化、仅 Trace Context 的 propagator、FastAPI SERVER span、合法/缺失/无效 `traceparent` 处理、公开入口不信任远程采样位、独立 `X-Request-ID`、诊断用 `X-Trace-ID`、受限 `X-Client-Action-ID` 和标准日志关联字段；以 `cd apps/backend && uv run pytest tests/unit && uv run ruff format --check src tests && uv run ruff check src tests && uv run mypy` 验证正常请求、Problem Details、无效上下文、伪造采样位、Baggage 被忽略、安全异常 stack/fingerprint、敏感字段排除和单一根 span
 
 ## 2. 交付 Celery 传播与可选导出
 

@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     embedding_adapter: ModelAdapter = "fake"
     structured_llm_adapter: ModelAdapter = "fake"
 
+    service_version: str = Field(default="0.1.0", min_length=1)
+    telemetry_trace_sample_ratio: float | None = Field(default=None, ge=0.0, le=1.0)
+
     oss_endpoint: str | None = None
     oss_bucket: str | None = None
     oss_access_key_id: str | None = None

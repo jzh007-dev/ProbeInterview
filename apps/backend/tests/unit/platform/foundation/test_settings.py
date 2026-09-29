@@ -61,6 +61,7 @@ def test_development_example_uses_local_fakes_without_secrets() -> None:
     assert settings.structured_llm_adapter == "fake"
     assert settings.oss_access_key_secret is None
     assert settings.bailian_api_key is None
+    assert settings.telemetry_trace_sample_ratio is None
 
 
 def test_production_rejects_local_actor() -> None:
@@ -116,5 +117,17 @@ def test_production_rejects_blank_adapter_settings(
     with pytest.raises(ValidationError, match=field_name):
         settings_type()(
             **production_values(**{field_name: blank_value}),
+            _env_file=None,
+        )
+
+
+@pytest.mark.parametrize("ratio", [-0.01, 1.01])
+def test_telemetry_sampling_ratio_is_bounded(ratio: float) -> None:
+    with pytest.raises(ValidationError, match="telemetry_trace_sample_ratio"):
+        settings_type()(
+            environment="test",
+            database_url="postgresql+psycopg://probe:probe@db/probe",
+            celery_broker_url="redis://redis:6379/0",
+            telemetry_trace_sample_ratio=ratio,
             _env_file=None,
         )

@@ -211,7 +211,13 @@ async def test_request_log_preserves_request_and_trace_id(
     events = json_log_events(capsys.readouterr().err)
     completed = next(event for event in events if event["event"] == "http.request.completed")
     assert completed["request_id"] == request_id
-    assert completed["trace_id"] == request_id
+    assert completed["trace_id"] == response.headers["X-Trace-ID"]
+    assert completed["span_id"]
+    assert int(str(completed["trace_flags"]), 16) & 0x01 == 0x01
+    assert completed["service.namespace"] == "probeinterview"
+    assert completed["service.name"] == "probeinterview-api"
+    assert completed["service.version"] == "0.1.0"
+    assert completed["deployment.environment.name"] == "test"
     assert completed["http_method"] == "GET"
     assert completed["http_path"] == "/health/live"
     assert completed["http_status"] == 200
@@ -246,9 +252,13 @@ async def test_unhandled_error_log_excludes_sensitive_context(
     events = json_log_events(captured)
     failed = next(event for event in events if event["event"] == "http.request.failed")
     assert failed["request_id"] == "sensitive-request"
-    assert failed["trace_id"] == "sensitive-request"
+    assert failed["trace_id"] == response.headers["X-Trace-ID"]
+    assert failed["span_id"]
+    assert int(str(failed["trace_flags"]), 16) & 0x01 == 0x01
     assert failed["error_code"] == "internal_error"
     assert failed["exception_type"] == "RuntimeError"
+    assert failed["error_stack"]
+    assert failed["error_fingerprint"]
     assert failed["summary"] == "Unhandled application error"
 
 
