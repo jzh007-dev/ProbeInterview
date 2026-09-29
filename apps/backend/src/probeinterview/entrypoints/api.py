@@ -15,6 +15,20 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from probeinterview.candidate.profile.api.router import router as profile_router
+from probeinterview.candidate.profile.application.overview import (
+    CurrentActorNotFound,
+    GetProfileOverview,
+    ProfileOverviewIncomplete,
+)
+from probeinterview.candidate.profile.infrastructure.queries import (
+    SqlAlchemyCandidateOverviewReader,
+)
+from probeinterview.identity.access.api.dependencies import CurrentActorUnavailable
+from probeinterview.identity.access.infrastructure.local_actor import build_actor_provider
+from probeinterview.identity.access.infrastructure.queries import (
+    SqlAlchemyIdentityDisplayReader,
+)
 from probeinterview.platform.foundation.api.contracts import (
     FieldViolation,
     HealthResource,
@@ -25,6 +39,10 @@ from probeinterview.platform.foundation.api.problems import problem_response
 from probeinterview.platform.foundation.infrastructure.logging import (
     bind_log_context,
     configure_logging,
+)
+from probeinterview.platform.foundation.infrastructure.persistence import (
+    create_engine,
+    create_session_factory,
 )
 from probeinterview.platform.foundation.infrastructure.readiness import (
     ReadinessCheck,
@@ -52,6 +70,15 @@ def create_app(
     app = FastAPI(title="ProbeInterview API")
     app.state.settings = resolved_settings
     app.state.readiness_checks = resolved_readiness_checks
+    app.state.actor_provider = build_actor_provider(resolved_settings)
+    persistence_engine = create_engine(resolved_settings.database_url)
+    session_factory = create_session_factory(persistence_engine)
+    app.state.persistence_engine = persistence_engine
+    app.state.profile_overview_query = GetProfileOverview(
+        identity_reader=SqlAlchemyIdentityDisplayReader(session_factory),
+        candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
+    )
+    app.include_router(profile_router)
 
     @app.middleware("http")
     async def add_request_id(
@@ -150,6 +177,54 @@ def create_app(
                 detail=detail,
                 instance=request.url.path,
                 code=code,
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(CurrentActorUnavailable)
+    async def actor_required_problem(
+        request: Request,
+        _error: CurrentActorUnavailable,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Unauthorized",
+                status=401,
+                detail="A current actor is required.",
+                instance=request.url.path,
+                code="actor_required",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(CurrentActorNotFound)
+    async def actor_not_found_problem(
+        request: Request,
+        _error: CurrentActorNotFound,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Not Found",
+                status=404,
+                detail="The configured actor was not found.",
+                instance=request.url.path,
+                code="actor_not_found",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(ProfileOverviewIncomplete)
+    async def incomplete_profile_problem(
+        request: Request,
+        _error: ProfileOverviewIncomplete,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Profile Overview Incomplete",
+                status=409,
+                detail="The current actor has no default target profile.",
+                instance=request.url.path,
+                code="profile_overview_incomplete",
                 request_id=request.state.request_id,
             )
         )

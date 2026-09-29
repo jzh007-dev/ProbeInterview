@@ -333,5 +333,6 @@ def make_settings() -> Settings:
         environment="test",
         database_url="postgresql+psycopg://probe:probe@postgres/probe",
         celery_broker_url="redis://redis:6379/0",
+        local_actor_enabled=False,
         _env_file=None,
     )

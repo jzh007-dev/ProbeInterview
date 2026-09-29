@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_boundaries(self) -> Self:
         if self.environment != "production":
+            if self.local_actor_enabled and self.local_actor_id is None:
+                raise ValueError("local actor requires local_actor_id")
             return self
 
         if self.local_actor_enabled:

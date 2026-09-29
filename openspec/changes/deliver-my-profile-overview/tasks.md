@@ -8,9 +8,9 @@
 
 ## 2. Deliver the owner-scoped overview API
 
-- [ ] 2.1 Implement `ActorContext`, the configuration-backed development/test local actor provider, and the current-actor FastAPI dependency; verify backend unit/API tests cover configured resolution, no actor header support, `401` Problem Details when unresolved, and production refusal.
-- [ ] 2.2 Implement identity display and candidate overview application contracts, owner-scoped PostgreSQL repositories, typed response schemas, and `GET /api/v1/me/overview`; verify API tests cover the seed response with `current_resume: null`, a metadata-fixture response exposing only display-safe resume fields, `recent_scores: []`, explicit default-profile selection, no storage key/hash/URL leakage, and `409 profile_overview_incomplete` when no default exists.
-- [ ] 2.3 Add PostgreSQL-backed two-actor API tests that use separate configured app instances against shared fixtures; verify each actor receives only its own user/profile/resume data and an actor without a resume cannot observe the other actor's resume.
+- [x] 2.1 Implement `ActorContext`, the configuration-backed development/test local actor provider, and the current-actor FastAPI dependency; verify backend unit/API tests cover configured resolution, no actor header support, `401` Problem Details when unresolved, and production refusal.
+- [x] 2.2 Implement identity display and candidate overview application contracts, owner-scoped PostgreSQL repositories, typed response schemas, and `GET /api/v1/me/overview`; verify API tests cover the seed response with `current_resume: null`, a metadata-fixture response exposing only display-safe resume fields, `recent_scores: []`, explicit default-profile selection, no storage key/hash/URL leakage, and `409 profile_overview_incomplete` when no default exists.
+- [x] 2.3 Add PostgreSQL-backed two-actor API tests that use separate configured app instances against shared fixtures; verify each actor receives only its own user/profile/resume data and an actor without a resume cannot observe the other actor's resume.
 - [ ] 2.4 Document the migration, no-resume seed, local actor, and `curl /api/v1/me/overview` workflow in `docs/development.md`, including that file storage/upload/preview belongs to the later simulation feature; verify every documented command runs as written against the development environment.
 
 ## 3. Deliver the “我的” page states

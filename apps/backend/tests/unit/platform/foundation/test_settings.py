@@ -85,6 +85,18 @@ def test_local_actor_id_is_typed_as_uuid() -> None:
     assert settings.local_actor_id == UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e1001")
 
 
+def test_enabled_local_actor_requires_actor_id() -> None:
+    with pytest.raises(ValidationError, match="local actor requires local_actor_id"):
+        settings_type()(
+            environment="test",
+            database_url="postgresql+psycopg://probe:probe@db/probe",
+            celery_broker_url="redis://redis:6379/0",
+            local_actor_enabled=True,
+            local_actor_id=None,
+            _env_file=None,
+        )
+
+
 def test_production_rejects_demo_profile_seed() -> None:
     with pytest.raises(ValidationError, match="production forbids demo profile seed"):
         settings_type()(
