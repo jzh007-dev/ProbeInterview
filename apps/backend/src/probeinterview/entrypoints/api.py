@@ -9,6 +9,7 @@ from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.sdk.trace.export import SpanExporter
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import State
@@ -37,7 +38,6 @@ from probeinterview.platform.foundation.infrastructure.settings import Settings
 from probeinterview.platform.foundation.infrastructure.telemetry import (
     API_SERVICE_NAME,
     initialize_telemetry,
-    instrument_fastapi_app,
 )
 
 _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -224,7 +224,11 @@ def create_app(
             dependencies={dependency: "available" for dependency in checks},
         )
 
-    instrument_fastapi_app(app, telemetry)
+    FastAPIInstrumentor.instrument_app(
+        app,
+        tracer_provider=telemetry.tracer_provider,
+        exclude_spans=["receive", "send"],
+    )
     return app
 
 
