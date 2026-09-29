@@ -5,6 +5,9 @@
   "projectname": "ProbeInterview",
   "setting": {
     "es6": true,
-    "minified": false
+    "minified": false,
+    "useCompilerPlugins": [
+      "typescript"
+    ]
   }
 }
