@@ -1,6 +1,7 @@
 """Typed runtime configuration and startup validation."""
 
 from typing import Literal, Self
+from uuid import UUID
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -32,6 +33,8 @@ class Settings(BaseSettings):
     celery_broker_url: str = Field(min_length=1)
 
     local_actor_enabled: bool = True
+    local_actor_id: UUID | None = None
+    demo_profile_seed_enabled: bool = False
     foundation_probe_enabled: bool = True
 
     object_storage_adapter: ObjectStorageAdapter = "fake"
@@ -51,6 +54,9 @@ class Settings(BaseSettings):
 
         if self.local_actor_enabled:
             raise ValueError("production forbids local actor")
+
+        if self.demo_profile_seed_enabled:
+            raise ValueError("production forbids demo profile seed")
 
         fake_adapters = {
             self.object_storage_adapter,

@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -20,6 +21,8 @@ def production_values(**overrides: object) -> dict[str, object]:
         "database_url": "postgresql+psycopg://probe:probe@db/probe",
         "celery_broker_url": "redis://redis:6379/0",
         "local_actor_enabled": False,
+        "local_actor_id": None,
+        "demo_profile_seed_enabled": False,
         "foundation_probe_enabled": False,
         "object_storage_adapter": "oss",
         "embedding_adapter": "bailian",
@@ -55,6 +58,8 @@ def test_development_example_uses_local_fakes_without_secrets() -> None:
 
     assert settings.environment == "development"
     assert settings.local_actor_enabled is True
+    assert settings.local_actor_id == UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e1001")
+    assert settings.demo_profile_seed_enabled is True
     assert settings.foundation_probe_enabled is True
     assert settings.object_storage_adapter == "fake"
     assert settings.embedding_adapter == "fake"
@@ -66,6 +71,26 @@ def test_development_example_uses_local_fakes_without_secrets() -> None:
 def test_production_rejects_local_actor() -> None:
     with pytest.raises(ValidationError, match="production forbids local actor"):
         settings_type()(**production_values(local_actor_enabled=True), _env_file=None)
+
+
+def test_local_actor_id_is_typed_as_uuid() -> None:
+    settings = settings_type()(
+        environment="test",
+        database_url="postgresql+psycopg://probe:probe@db/probe",
+        celery_broker_url="redis://redis:6379/0",
+        local_actor_id="018f7f64-3c6a-7d21-95a8-4d1b8c2e1001",
+        _env_file=None,
+    )
+
+    assert settings.local_actor_id == UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e1001")
+
+
+def test_production_rejects_demo_profile_seed() -> None:
+    with pytest.raises(ValidationError, match="production forbids demo profile seed"):
+        settings_type()(
+            **production_values(demo_profile_seed_enabled=True),
+            _env_file=None,
+        )
 
 
 def test_production_rejects_fake_adapter_fallback() -> None:
