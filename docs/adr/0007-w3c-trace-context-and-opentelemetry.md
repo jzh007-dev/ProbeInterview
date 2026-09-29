@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0008](0008-server-owned-public-traces-and-deferred-export.md)
 
 ## Date
 

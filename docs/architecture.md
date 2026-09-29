@@ -131,11 +131,11 @@ flowchart LR
 - **身份与隔离**：应用层使用 `ActorContext(actor_id, capabilities)`；owner 和公共范围条件必须在数据库/向量查询前应用。白名单只增加公共知识发布 capability。
 - **版本与快照**：上传来源、解析结果、Embedding、知识内容、面试配置、问题和评估规则均通过显式版本关联；派生数据不得覆盖事实来源。
 - **HTTP 契约**：成功直接返回类型化资源；错误使用 RFC 9457 Problem Details；异步创建返回 `202 + Location`；命令使用 `Idempotency-Key`。
-- **Trace**：HTTP 与 Celery 使用 W3C `traceparent`/`tracestate` 传播 OpenTelemetry context；Request ID 独立标识单次 HTTP，Client Action ID 关联一次客户端意图，Job ID 定位后台任务。API 与 Worker 使用稳定 service resource 和安全日志关联字段。OTLP trace exporter 只在 infrastructure 按配置启用，默认关闭且失败不得改变业务结果。Agent run/step/tool/model 语义由实际 Agent runtime 的后续 change 定义。
+- **Trace**：公网 HTTP 忽略入站 `traceparent`、`tracestate` 与 Baggage，由 API 创建服务端 trace；Request ID 独立标识单次 HTTP。API 到 Celery Worker 使用 W3C Trace Context，Job ID 定位后台任务。API 与 Worker 使用稳定 service resource 和安全日志关联字段。客户端 tracing、生产 OTLP/Collector、采样和导出脱敏由后续 changes 定义。
 - **结构化模型输出**：LLM 输出必须通过 Pydantic schema 校验；模型不能绕过权限、状态机或直接执行任意代码。
 - **隐私**：普通日志不记录上传正文、私人知识、请求正文、完整 Prompt/模型响应、令牌或连接串。临时音频在转写确认后按产品保留策略删除。
 
-相关决策：[ADR 0004](adr/0004-api-and-identity-boundary.md)、[ADR 0005](adr/0005-deployment-and-runtime-operations.md)、[ADR 0006](adr/0006-external-adapters-and-verification-strategy.md)、[ADR 0007](adr/0007-w3c-trace-context-and-opentelemetry.md)。
+相关决策：[ADR 0004](adr/0004-api-and-identity-boundary.md)、[ADR 0005](adr/0005-deployment-and-runtime-operations.md)、[ADR 0006](adr/0006-external-adapters-and-verification-strategy.md)、[ADR 0008](adr/0008-server-owned-public-traces-and-deferred-export.md)。
 
 ## 6. 质量属性与取舍
 
@@ -144,13 +144,13 @@ flowchart LR
 | 成本 | 单 ECS、PostgreSQL + pgvector、共享后端镜像 | 不提供高可用与独立扩缩容 |
 | 可恢复性 | 长任务持久化状态、有限重试、幂等和 QUEUED 恢复 | 暂不实现完整 transactional outbox |
 | 延迟 | 低延迟交互留在 API；解析、Embedding 和长评分异步执行 | 客户端需要轮询后台状态 |
-| 可追溯性 | W3C trace context、request/client action/job、服务资源、来源版本和评估证据可关联 | 增加遥测与版本字段成本 |
+| 可追溯性 | 服务端 HTTP trace、内部 W3C Celery 传播、request/job、服务资源、来源版本和评估证据可关联 | 客户端 tracing 与生产导出延期 |
 | 隐私 | owner 前置过滤、日志脱敏、临时数据删除 | 排障不能依赖直接记录原文 |
 | 可测试性 | 确定性 fake + 真实本地数据库/队列 E2E | foundation 测试不证明模型质量 |
 
 根级 `scripts/verify` 将成为本地和 CI 的唯一完整验证入口；在 `setup-foundation` 实现前该命令尚不存在。CI 托管平台不影响验证契约。
 
-相关决策：[ADR 0003](adr/0003-asynchronous-job-architecture.md)、[ADR 0005](adr/0005-deployment-and-runtime-operations.md)、[ADR 0006](adr/0006-external-adapters-and-verification-strategy.md)、[ADR 0007](adr/0007-w3c-trace-context-and-opentelemetry.md)。
+相关决策：[ADR 0003](adr/0003-asynchronous-job-architecture.md)、[ADR 0005](adr/0005-deployment-and-runtime-operations.md)、[ADR 0006](adr/0006-external-adapters-and-verification-strategy.md)、[ADR 0008](adr/0008-server-owned-public-traces-and-deferred-export.md)。
 
 ## 7. 演进点
 
