@@ -14,8 +14,7 @@ ADR 只追加、不静默改写。若未来推翻已接受的决策，应创建�
 | [0004](0004-api-and-identity-boundary.md) | Accepted | HTTP API、幂等、错误格式及 `ActorContext` 边界 | `setup-foundation` 及全部 API changes |
 | [0005](0005-deployment-and-runtime-operations.md) | Accepted | 单 ECS + Docker Compose + Caddy，以及配置和日志规范 | `setup-foundation` 及部署运行 |
 | [0006](0006-external-adapters-and-verification-strategy.md) | Accepted | 外部服务端口、确定性 fake 及统一自动验证入口 | `setup-foundation` 及云服务接入 changes |
-| [0007](0007-w3c-trace-context-and-opentelemetry.md) | Superseded | 原 W3C Trace Context、客户端 trace 延续和 OTLP 决策 | 被 ADR 0008 取代 |
-| [0008](0008-server-owned-public-traces-and-deferred-export.md) | Accepted | 最小服务端 trace 与 API/Celery/Worker 内部传播 | `establish-trace-context-propagation` |
+| [0007](0007-w3c-trace-context-and-opentelemetry.md) | Accepted | W3C Trace Context、OpenTelemetry Python、可选 OTLP 导出及遥测隐私边界 | `establish-trace-context-propagation` 及后续跨运行单元 changes |
 
 ## Deliberately deferred decisions
 
