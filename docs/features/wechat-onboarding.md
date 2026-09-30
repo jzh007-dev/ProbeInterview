@@ -1,7 +1,14 @@
 # 微信登录与 Onboarding
 
-> 状态：进行中。配置/存储基础（原 tasks 1.1–1.2）已完成。
 > 本文件取代 `openspec/changes/establish-wechat-authenticated-onboarding/`（保留为历史归档）。
+> 本 feature 较大，按 workflow.md L2 规则分四个阶段交付，每阶段独立可验证、独立提交：
+
+| 阶段 | 内容 | 状态 |
+|---|---|---|
+| ① 后端认证基础 | 配置类型化、对象存储端口、迁移 0003、交换+会话、注册+头像 | ✅ 完成 |
+| ② 全局鉴权与概览 | 受保护路由、Bearer 会话解析、可空概览、PUT 目标画像 | ⬜ |
+| ③ 小程序认证边界 | auth store v1/v2、transport、登录协调器、登录页 | ⬜ |
+| ④ 页面改造与收尾 | 首页/我的/上传改造、Compose/smoke、完整验收 | ⬜ |
 
 ## 为什么
 
@@ -43,6 +50,27 @@ AppSecret 仅服务端；`session_key` 不下发不持久化。
 补齐 fake 会话下发与 smoke 携带 token 后，两者转绿。CI 中 compose-topology job 在本
 feature 合并前预期为红。
 
+## 小程序页面与模块
+
+**新增 `pages/login/index`（非 tab 页，启动首屏）**
+- 状态机：idle → exchanging →（已绑定）成功切换首页 /（未绑定）registration_required
+  表单态（昵称输入 + chooseAvatar 选头像或默认头像）→ registering → 成功 / 可恢复错误
+- 启动只做本地缓存校验：有效双缓存 → `wx.switchTab` 进首页；缺失/过期/损坏 → 留在登录页；
+  **启动永不调用 `wx.login`**，只有点击"微信登录"才调用
+- 注册表单：微信昵称输入 capability + `button open-type="chooseAvatar"` 临时路径；
+  默认头像 = 无文件的显式选择；提交中禁用；成功后表单不再可编辑
+- 错误态只渲染安全文案，不透出供应商/存储细节；视觉遵循 `docs/design/visuals/ui-direction.html`
+
+**新增基础设施（登录页与各 tab 共用）**
+- auth store（token，schema v1）+ current-user display cache（schema v2）
+- 登录协调器（唯一允许调 `wx.login` 的位置；校验响应后原子落两个缓存）
+- 统一 JSON / multipart transport（集中附 Bearer；401 单飞失效双清并重进登录页）
+
+**改造既有页面**
+- 首页：删除 overview 回退；空目标画像提示 + switchTab 到"我的"
+- 我的：只读昵称头像 + 目标画像创建/编辑
+- 上传：迁移到共享 transport，失效清 owner 记录
+
 ## 验收
 
 **配置与存储基础（已完成待提交）**
@@ -57,10 +85,10 @@ feature 合并前预期为红。
 - [x] bootstrap 路由免 token；响应与日志无 code/token/secret/session_key/openid
 
 **注册与头像**
-- [ ] 昵称 trim/长度/控制字符校验；一次性凭证校验；用户+绑定+session 原子创建
-- [ ] magic-byte 校验（空/超限/不支持/不符）；`avatars/<user-id>/<avatar-id>.<ext>` 私有存储 + 签名 URL；无临时路径、无永久公开 URL
-- [ ] 上传失败回滚账户状态；提交失败删除未引用对象——两种注入都无残留
-- [ ] 并发同 token/异 token 注册：恰一个用户与绑定、至多一个头像对象、只有胜者拿到 session、败者凭证不可收敛即拒绝
+- [x] 昵称 trim/长度/控制字符校验；一次性凭证校验；用户+绑定+session 原子创建
+- [x] magic-byte 校验（空/超限/不支持/不符）；`avatars/<user-id>/<avatar-id>.<ext>` 私有存储；无临时路径、无永久公开 URL（响应携带签名 URL 随阶段②概览契约落地）
+- [x] 上传失败回滚账户状态；提交失败删除未引用对象——两种注入都无残留
+- [x] 并发同 token/异 token 注册：恰一个用户与绑定、至多一个头像对象、只有胜者拿到 session、败者凭证不可收敛即拒绝
 
 **全局鉴权**
 - [ ] OpenAPI 路由清单证明：仅 health + bootstrap 公开；新挂业务路由默认受保护

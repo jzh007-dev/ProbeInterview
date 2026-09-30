@@ -17,6 +17,7 @@ from probeinterview.identity.access.application.exchange import (
     ExchangeTargetProfile,
     WeChatExchangeService,
 )
+from probeinterview.identity.access.application.registration import RegistrationService
 from probeinterview.identity.access.application.wechat import WeChatIdentityExchange
 from probeinterview.identity.access.infrastructure.auth_stores import (
     SqlAlchemyAuthSessionStore,
@@ -24,6 +25,10 @@ from probeinterview.identity.access.infrastructure.auth_stores import (
     SqlAlchemyRegistrationAttemptStore,
     SqlAlchemyWeChatBindingReader,
 )
+from probeinterview.identity.access.infrastructure.registration_store import (
+    SqlAlchemyRegistrationStore,
+)
+from probeinterview.platform.foundation.application.object_storage import ObjectStorage
 from probeinterview.platform.foundation.infrastructure.settings import Settings
 
 
@@ -56,6 +61,17 @@ class ComposedExchangeSnapshotReader:
         )
 
 
+def build_composed_snapshot_reader(
+    session_factory: sessionmaker[Session],
+) -> ComposedExchangeSnapshotReader:
+    """Build the shared identity-plus-candidate snapshot reader."""
+
+    return ComposedExchangeSnapshotReader(
+        identity_snapshots=SqlAlchemyExchangeSnapshotReader(session_factory),
+        candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
+    )
+
+
 def build_wechat_exchange_service(
     settings: Settings,
     session_factory: sessionmaker[Session],
@@ -66,11 +82,22 @@ def build_wechat_exchange_service(
     return WeChatExchangeService(
         wechat=wechat,
         bindings=SqlAlchemyWeChatBindingReader(session_factory),
-        snapshots=ComposedExchangeSnapshotReader(
-            identity_snapshots=SqlAlchemyExchangeSnapshotReader(session_factory),
-            candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
-        ),
+        snapshots=build_composed_snapshot_reader(session_factory),
         sessions=SqlAlchemyAuthSessionStore(session_factory),
         attempts=SqlAlchemyRegistrationAttemptStore(session_factory),
         app_id=settings.wechat_app_id or "",
+    )
+
+
+def build_wechat_registration_service(
+    session_factory: sessionmaker[Session],
+    storage: ObjectStorage,
+) -> RegistrationService:
+    """Wire the registration service against the stores and shared storage."""
+
+    return RegistrationService(
+        registrations=SqlAlchemyRegistrationStore(session_factory),
+        snapshots=build_composed_snapshot_reader(session_factory),
+        sessions=SqlAlchemyAuthSessionStore(session_factory),
+        storage=storage,
     )

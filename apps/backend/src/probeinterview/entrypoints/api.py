@@ -24,9 +24,17 @@ from probeinterview.candidate.profile.application.overview import (
 from probeinterview.candidate.profile.infrastructure.queries import (
     SqlAlchemyCandidateOverviewReader,
 )
-from probeinterview.entrypoints.identity_wiring import build_wechat_exchange_service
+from probeinterview.entrypoints.identity_wiring import (
+    build_wechat_exchange_service,
+    build_wechat_registration_service,
+)
 from probeinterview.identity.access.api.dependencies import CurrentActorUnavailable
 from probeinterview.identity.access.api.router import router as wechat_auth_router
+from probeinterview.identity.access.application.registration import (
+    RegistrationFieldInvalid,
+    RegistrationStorageUnavailable,
+    RegistrationTokenInvalid,
+)
 from probeinterview.identity.access.application.wechat import (
     WeChatCodeExchangeFailed,
     WeChatServiceUnavailable,
@@ -106,6 +114,10 @@ def create_app(
         resolved_settings,
         session_factory,
         build_wechat_exchange(resolved_settings),
+    )
+    app.state.wechat_registration_service = build_wechat_registration_service(
+        session_factory,
+        app.state.object_storage,
     )
 
     @app.middleware("http")
@@ -253,6 +265,61 @@ def create_app(
                 detail="The WeChat identity service is temporarily unavailable.",
                 instance=request.url.path,
                 code="wechat_service_unavailable",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(RegistrationTokenInvalid)
+    async def registration_token_invalid_problem(
+        request: Request,
+        _error: RegistrationTokenInvalid,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Registration Token Invalid",
+                status=401,
+                detail="The registration credential is unknown, expired, or already used.",
+                instance=request.url.path,
+                code="registration_token_invalid",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(RegistrationFieldInvalid)
+    async def registration_field_invalid_problem(
+        request: Request,
+        error: RegistrationFieldInvalid,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Registration Validation Error",
+                status=422,
+                detail="The registration request contains invalid fields.",
+                instance=request.url.path,
+                code=error.code,
+                request_id=request.state.request_id,
+                errors=[
+                    FieldViolation(
+                        field=error.field,
+                        message=error.message,
+                        code=error.code,
+                    )
+                ],
+            )
+        )
+
+    @app.exception_handler(RegistrationStorageUnavailable)
+    async def registration_storage_unavailable_problem(
+        request: Request,
+        _error: RegistrationStorageUnavailable,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Storage Unavailable",
+                status=503,
+                detail="Private object storage is temporarily unavailable.",
+                instance=request.url.path,
+                code="storage_unavailable",
                 request_id=request.state.request_id,
             )
         )

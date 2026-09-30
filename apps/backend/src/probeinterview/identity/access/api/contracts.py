@@ -19,6 +19,13 @@ class WeChatExchangeRequest(BaseModel):
     code: str = Field(min_length=1, max_length=255)
 
 
+class WeChatRegistrationRequest(BaseModel):
+    """One-time registration credential plus the display-safe nickname."""
+
+    registration_token: str = Field(min_length=1, max_length=255)
+    nickname: str = Field(min_length=1, max_length=200)
+
+
 class ExchangeTargetProfileResource(BaseModel):
     """Display-safe summary of the default target profile."""
 
