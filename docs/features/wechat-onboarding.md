@@ -6,7 +6,7 @@
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | ① 后端认证基础 | 配置类型化、对象存储端口、迁移 0003、交换+会话、注册+头像 | ✅ 完成 |
-| ② 全局鉴权与概览 | 受保护路由、Bearer 会话解析、可空概览、PUT 目标画像 | ⬜ |
+| ② 全局鉴权与概览 | 受保护路由、Bearer 会话解析、可空概览、PUT 目标画像 | ✅ 完成 |
 | ③ 小程序认证边界 | auth store v1/v2、transport、登录协调器、登录页 | ⬜ |
 | ④ 页面改造与收尾 | 首页/我的/上传改造、Compose/smoke、完整验收 | ⬜ |
 
@@ -44,11 +44,13 @@ AppSecret 仅服务端；`session_key` 不下发不持久化。
 
 ## 当前已知中间态（2026-10-01）
 
-后端已默认 `wechat + fake`，匿名请求开始返回 401 `actor_required`；但 Compose 拓扑检查
-（`scripts/test-compose-topology` 尾部 4 个匿名 HTTP 断言）和 beta smoke 仍按旧匿名流程编写，
-在本分支上会失败。这属于下方"小程序/收尾"组验收的一部分（等价于原 change 任务 8.1/8.2）：
-补齐 fake 会话下发与 smoke 携带 token 后，两者转绿。CI 中 compose-topology job 在本
-feature 合并前预期为红。
+后端已默认 `wechat + fake`，业务 API 在挂载点强制 Bearer 会话：匿名请求返回 401
+`authentication_required`，概览契约改为可空字段并移除了 409/404 错误路径。但 Compose
+拓扑检查（`scripts/test-compose-topology` 尾部 4 个匿名 HTTP 断言）和 beta smoke 仍按
+旧匿名流程编写，在本分支上会失败；`docs/development.md` 的 curl 示例也未携带 token。
+这属于阶段 ③/④ 的验收范围（等价于原 change 任务 8.1/8.2）：补齐 fake 会话下发与
+smoke 携带 token、更新文档示例后，两者转绿。CI 中 compose-topology job 在本 feature
+合并前预期为红。
 
 ## 小程序页面与模块
 
@@ -86,20 +88,20 @@ feature 合并前预期为红。
 
 **注册与头像**
 - [x] 昵称 trim/长度/控制字符校验；一次性凭证校验；用户+绑定+session 原子创建
-- [x] magic-byte 校验（空/超限/不支持/不符）；`avatars/<user-id>/<avatar-id>.<ext>` 私有存储；无临时路径、无永久公开 URL（响应携带签名 URL 随阶段②概览契约落地）
+- [x] magic-byte 校验（空/超限/不支持/不符）；`avatars/<user-id>/<avatar-id>.<ext>` 私有存储；无临时路径、无永久公开 URL（响应携带签名 URL，阶段②已落地）
 - [x] 上传失败回滚账户状态；提交失败删除未引用对象——两种注入都无残留
 - [x] 并发同 token/异 token 注册：恰一个用户与绑定、至多一个头像对象、只有胜者拿到 session、败者凭证不可收敛即拒绝
 
 **全局鉴权**
-- [ ] OpenAPI 路由清单证明：仅 health + bootstrap 公开；新挂业务路由默认受保护
-- [ ] valid/缺失/非 Bearer/空/畸形/未知/过期/吊销 token → 稳定 `authentication_required`；鉴权失败零仓储/存储调用；capability 变更下次请求生效
-- [ ] overview 与 knowledge-source 移入受保护挂载；两用户 overview/source/quota 完全隔离；无 local actor 回退
-- [ ] 鉴权与供应商错误路径的安全码 + 捕获日志回归（无明文 token/凭证/签名 URL/请求体/原始错误）
+- [x] OpenAPI 路由清单证明：仅 health + bootstrap 公开；新挂业务路由默认受保护
+- [x] valid/缺失/非 Bearer/空/畸形/未知/过期/吊销 token → 稳定 `authentication_required`；鉴权失败零仓储/存储调用；capability 变更下次请求生效
+- [x] overview 与 knowledge-source 移入受保护挂载；两用户 overview/source/quota 完全隔离；无 local actor 回退
+- [x] 鉴权与供应商错误路径的安全码 + 捕获日志回归（无明文 token/凭证/签名 URL/请求体/原始错误）
 
 **概览与目标画像**
-- [ ] 可空签名头像 + 可空默认目标画像；新用户 200；无 object key 泄漏；签名 URL 带过期元数据
-- [ ] PUT 目标画像：创建/修改/重复归一化；字段级 422；未认证 401；昵称头像不被触碰
-- [ ] actor 并发首写串行化 + 部分唯一约束兜底；客户端伪造他人 profile ID 不可读写
+- [x] 可空签名头像 + 可空默认目标画像；新用户 200；无 object key 泄漏；签名 URL 带过期元数据
+- [x] PUT 目标画像：创建/修改/重复归一化；字段级 422；未认证 401；昵称头像不被触碰
+- [x] actor 并发首写串行化 + 部分唯一约束兜底；客户端伪造他人 profile ID 不可读写
 
 **小程序**
 - [ ] auth store(v1) + display cache(v2，可空过期头像/画像摘要) 读写往返、版本失效、损坏清理、一键双清
