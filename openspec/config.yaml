@@ -38,6 +38,7 @@ context: |
   - Backend static checks: cd apps/backend && uv run ruff format --check migrations src tests && uv run ruff check migrations src tests && uv run mypy.
   - Mini-program type check: cd apps/miniprogram && npm run typecheck.
   - Compose topology check: scripts/test-compose-topology.
+  - Running-development beta smoke: scripts/test-beta-smoke.
   - Local API and Worker startup commands are documented in docs/development.md.
   - Database migrations and the canonical full scripts/verify entry are added by later changes.
 

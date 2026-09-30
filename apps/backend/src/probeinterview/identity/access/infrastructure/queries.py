@@ -6,7 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from probeinterview.identity.access.application.queries import IdentityDisplay
-from probeinterview.identity.access.infrastructure.models import UserModel
+from probeinterview.identity.access.infrastructure.models import (
+    UserCapabilityModel,
+    UserModel,
+)
 
 
 class SqlAlchemyIdentityDisplayReader:
@@ -25,3 +28,19 @@ class SqlAlchemyIdentityDisplayReader:
             nickname=user.nickname,
             avatar_url=user.avatar_url,
         )
+
+
+class SqlAlchemyCapabilityReader:
+    """Load the current capability set from identity-owned persistence."""
+
+    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+        self._session_factory = session_factory
+
+    def get_for_actor(self, actor_id: UUID) -> frozenset[str]:
+        with self._session_factory() as session:
+            capabilities = session.scalars(
+                select(UserCapabilityModel.capability).where(
+                    UserCapabilityModel.user_id == actor_id
+                )
+            ).all()
+        return frozenset(capabilities)

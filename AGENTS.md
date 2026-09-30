@@ -52,6 +52,7 @@ Available setup and focused-check commands:
 - backend format/lint/type checks: `cd apps/backend && uv run ruff format --check migrations src tests && uv run ruff check migrations src tests && uv run mypy`;
 - mini-program type check: `cd apps/miniprogram && npm run typecheck`;
 - Compose topology check: `scripts/test-compose-topology`;
+- running-development beta smoke: `scripts/test-beta-smoke`;
 - local API and Worker startup: see `docs/development.md`.
 
 Docker Compose startup and shutdown are documented in `docs/development.md`.

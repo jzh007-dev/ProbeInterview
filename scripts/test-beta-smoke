@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+base_url="${PROBEINTERVIEW_BETA_BASE_URL:-http://127.0.0.1:8080}"
+base_url="${base_url%/}"
+openapi_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-beta-openapi.XXXXXX")"
+collection_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-beta-collection.XXXXXX")"
+
+cleanup() {
+  rm -f "${openapi_file}" "${collection_file}"
+}
+trap cleanup EXIT
+
+command -v curl >/dev/null
+command -v python3 >/dev/null
+
+(
+  cd "${repo_root}/apps/miniprogram"
+  npm run beta-test
+)
+
+curl --fail --silent --show-error \
+  --output "${openapi_file}" \
+  "${base_url}/openapi.json"
+python3 - "${openapi_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+paths = json.loads(pathlib.Path(sys.argv[1]).read_text())["paths"]
+assert "/api/v1/me/knowledge-sources" in paths
+PY
+
+curl --fail --silent --show-error \
+  --output "${collection_file}" \
+  "${base_url}/api/v1/me/knowledge-sources"
+python3 - "${collection_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+quota = data["quota"]
+assert quota["timezone"] == "Asia/Shanghai"
+assert quota["daily_used"] <= quota["daily_limit"]
+assert quota["effective_source_count"] <= quota["effective_source_limit"]
+assert isinstance(data["items"], list)
+for item in data["items"]:
+    assert set(item) == {
+        "id",
+        "original_filename",
+        "scope",
+        "processing_status",
+        "uploaded_at",
+    }
+PY

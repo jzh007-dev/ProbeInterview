@@ -62,3 +62,21 @@ class WeChatIdentityModel(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class UserCapabilityModel(Base):
+    """Persisted capability assigned to a normal user identity."""
+
+    __tablename__ = "user_capabilities"
+
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    capability: Mapped[str] = mapped_column(String(100), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

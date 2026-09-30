@@ -1,1 +1,3 @@
-@import "../../styles/page-shell.wxss";
+page {
+  min-height: 100%;
+}

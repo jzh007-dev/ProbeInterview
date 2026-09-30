@@ -8,6 +8,7 @@
     "npm": "11.16.x"
   },
   "scripts": {
+    "beta-test": "jest --runInBand tests/miniprogram-beta-contract.test.cjs tests/knowledge-source-client.test.cjs tests/knowledge-source-component.test.cjs && tsc --noEmit",
     "test": "jest --runInBand",
     "typecheck": "tsc --noEmit"
   },

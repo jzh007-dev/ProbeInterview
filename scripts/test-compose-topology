@@ -7,8 +7,9 @@ compose_dir="${repo_root}/infra/compose"
 base_file="${compose_dir}/compose.yaml"
 test_file="${compose_dir}/compose.test.yaml"
 production_file="${compose_dir}/compose.production.yaml"
+oss_file="${compose_dir}/compose.oss.yaml"
 
-for required_file in "${base_file}" "${test_file}" "${production_file}"; do
+for required_file in "${base_file}" "${test_file}" "${production_file}" "${oss_file}"; do
   if [[ ! -f "${required_file}" ]]; then
     printf 'missing required Compose file: %s\n' "${required_file}" >&2
     exit 1
@@ -25,10 +26,41 @@ docker compose \
   -f "${base_file}" \
   -f "${test_file}" \
   config --quiet
+oss_config_file="$(
+  mktemp "${TMPDIR:-/tmp}/probeinterview-oss-compose.XXXXXX"
+)"
 production_config_file="$(
   mktemp "${TMPDIR:-/tmp}/probeinterview-production-compose.XXXXXX"
 )"
-trap 'rm -f "${production_config_file}"' EXIT
+trap 'rm -f "${oss_config_file}" "${production_config_file}"' EXIT
+
+PROBEINTERVIEW_OSS_ENDPOINT="https://oss-cn-shanghai.aliyuncs.com" \
+PROBEINTERVIEW_OSS_BUCKET="probeinterview-test-kb-bucket" \
+PROBEINTERVIEW_OSS_ACCESS_KEY_ID="test-access-key" \
+PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET="test-access-secret" \
+  docker compose \
+  --project-directory "${compose_dir}" \
+  -f "${base_file}" \
+  -f "${oss_file}" \
+  config --format json >"${oss_config_file}"
+
+python3 - "${oss_config_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+for service_name in ("api", "database-initializer", "worker"):
+    environment = config["services"][service_name]["environment"]
+    assert environment["PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER"] == "oss"
+    assert (
+        environment["PROBEINTERVIEW_OSS_ENDPOINT"]
+        == "https://oss-cn-shanghai.aliyuncs.com"
+    )
+    assert environment["PROBEINTERVIEW_OSS_BUCKET"] == "probeinterview-test-kb-bucket"
+    assert environment["PROBEINTERVIEW_OSS_ACCESS_KEY_ID"] == "test-access-key"
+    assert environment["PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET"] == "test-access-secret"
+PY
 
 PROBEINTERVIEW_DOMAIN="probe.example.invalid" \
 PROBEINTERVIEW_DATABASE_URL="postgresql+psycopg://probeinterview:test-database-password@postgres:5432/probeinterview" \
@@ -138,7 +170,7 @@ docker run --rm \
   "${caddy_image}" \
   caddy validate --config /etc/caddy/Caddyfile
 
-rm -f "${production_config_file}"
+rm -f "${oss_config_file}" "${production_config_file}"
 trap - EXIT
 
 project_name="probeinterview-test-${$}"
@@ -199,3 +231,18 @@ curl --fail --silent --show-error \
   "http://127.0.0.1:${test_port}/api/v1/me/overview" \
   | python3 -c \
     'import json, sys; data = json.load(sys.stdin); assert data["nickname"] == "Bao"; assert data["current_resume"] is None; assert data["recent_scores"] == []'
+
+for _ in 1 2; do
+  curl --fail-with-body --silent --show-error \
+    -H "Idempotency-Key: compose-knowledge-source" \
+    -F "scope=PRIVATE" \
+    -F "file=@${repo_root}/docs/architecture.md;type=text/markdown" \
+    "http://127.0.0.1:${test_port}/api/v1/me/knowledge-sources" \
+    | python3 -c \
+      'import json, sys; data = json.load(sys.stdin); assert data["source"]["scope"] == "PRIVATE"; assert data["source"]["processing_status"] == "PENDING_EXTRACTION"; assert data["quota"]["daily_used"] == 1; assert data["quota"]["effective_source_count"] == 1'
+done
+
+curl --fail --silent --show-error \
+  "http://127.0.0.1:${test_port}/api/v1/me/knowledge-sources" \
+  | python3 -c \
+    'import json, sys; data = json.load(sys.stdin); assert len(data["items"]) == 1; assert data["items"][0]["original_filename"] == "architecture.md"; assert data["items"][0]["processing_status"] == "PENDING_EXTRACTION"; assert data["quota"]["daily_used"] == 1'

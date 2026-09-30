@@ -6,6 +6,7 @@ const simulate = require("miniprogram-simulate")
 const root = path.resolve(__dirname, "../miniprogram")
 let profileComponentId
 let homeComponentId
+let uploadComponentId
 
 beforeAll(() => {
   const homeComponentPath = path.join(
@@ -13,8 +14,13 @@ beforeAll(() => {
     "components/home-knowledge-overview/index",
   )
   const componentPath = path.join(root, "components/profile-overview/index")
+  const uploadComponentPath = path.join(
+    root,
+    "components/knowledge-source-manager/index",
+  )
   homeComponentId = simulate.load(homeComponentPath, {compiler: "simulate"})
   profileComponentId = simulate.load(componentPath, {compiler: "simulate"})
+  uploadComponentId = simulate.load(uploadComponentPath, {compiler: "simulate"})
 })
 
 test("declares native tab state, renders home, and preserves the remaining routes", () => {
@@ -54,7 +60,7 @@ test("declares native tab state, renders home, and preserves the remaining route
   expect(homeWxml).toContain("<home-knowledge-overview")
   expect(homeWxml).not.toContain("page-shell")
 
-  for (const [pagePath] of expected.slice(1, 4)) {
+  for (const [pagePath] of expected.slice(1, 3)) {
     expect(fs.readFileSync(path.join(root, `${pagePath}.wxml`), "utf8")).toContain(
       "page-shell",
     )
@@ -74,9 +80,16 @@ test("declares native tab state, renders home, and preserves the remaining route
     "utf8",
   )
   expect(profileWxml).toContain("<profile-overview")
+  const uploadWxml = fs.readFileSync(
+    path.join(root, "pages/upload/index.wxml"),
+    "utf8",
+  )
+  expect(uploadWxml).toContain("<knowledge-source-manager")
+  expect(uploadWxml).not.toContain("page-shell")
 
   expect(simulate.render(homeComponentId)).toBeDefined()
   expect(simulate.render(profileComponentId)).toBeDefined()
+  expect(simulate.render(uploadComponentId)).toBeDefined()
 })
 
 function readJson(relativePath) {

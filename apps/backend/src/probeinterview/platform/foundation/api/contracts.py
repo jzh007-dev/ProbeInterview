@@ -38,3 +38,4 @@ class ProblemDetails(BaseModel):
     request_id: str
     errors: list[FieldViolation] | None = None
     unavailable_dependencies: list[str] | None = None
+    quota: dict[str, str | int] | None = None

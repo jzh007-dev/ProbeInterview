@@ -1,0 +1,103 @@
+<view class="knowledge-source-manager">
+  <view class="page-head">
+    <view>
+      <view class="head-kicker">个人内容</view>
+      <view class="page-title">上传与管理</view>
+    </view>
+  </view>
+
+  <view wx:if="{{status == 'loading'}}" class="state-card">
+    <view class="state-title">正在加载知识资料</view>
+    <view class="state-copy">正在读取上传记录与额度</view>
+  </view>
+
+  <view wx:elif="{{status == 'error'}}" class="state-card error-card">
+    <view class="state-title">上传记录加载失败</view>
+    <view class="state-copy">{{errorMessage}}</view>
+    <button id="retry-collection" class="secondary-action" bindtap="retryCollection">重新加载</button>
+  </view>
+
+  <block wx:elif="{{status == 'ready'}}">
+    <view class="upload-card">
+      <view class="upload-card-head">
+        <view class="upload-icon">文</view>
+        <view>
+          <view class="upload-title">知识资料</view>
+          <view class="state-copy">仅支持单个 UTF-8 Markdown，必须小于 500 KiB</view>
+        </view>
+      </view>
+
+      <view wx:if="{{quota}}" class="quota-copy">
+        今日 {{quota.daily_used}} / {{quota.daily_limit}} · 资料 {{quota.effective_source_count}} / {{quota.effective_source_limit}}
+      </view>
+      <view wx:if="{{quotaDisabled}}" class="quota-warning">
+        当前额度已用尽，已有记录仍可查看
+      </view>
+
+      <button
+        id="choose-markdown"
+        class="secondary-action"
+        disabled="{{uploading || quotaDisabled}}"
+        bindtap="chooseFile"
+      >选择 Markdown</button>
+
+      <view wx:if="{{selectedFile}}" class="selected-file">
+        <view>
+          <view class="selected-name">{{selectedFile.name}}</view>
+          <view class="state-copy">{{selectedFile.sizeLabel}}</view>
+        </view>
+        <view class="scope-selector">
+          <view
+            id="scope-private"
+            class="scope-option {{selectedScope == 'private' ? 'selected' : ''}}"
+            data-scope="private"
+            bindtap="selectScope"
+          >private</view>
+          <view
+            id="scope-public"
+            class="scope-option {{selectedScope == 'public' ? 'selected' : ''}}"
+            data-scope="public"
+            bindtap="selectScope"
+          >public</view>
+        </view>
+        <button
+          id="submit-upload"
+          class="primary-action"
+          loading="{{uploading}}"
+          disabled="{{uploading || quotaDisabled}}"
+          bindtap="submitUpload"
+        >{{uploading ? '正在上传' : '提交上传'}}</button>
+      </view>
+
+      <view wx:if="{{errorMessage}}" class="inline-error">{{errorMessage}}</view>
+    </view>
+
+    <view class="section-head">
+      <view class="section-title">最近上传</view>
+      <view class="state-copy">仅显示你的资料</view>
+    </view>
+
+    <view wx:if="{{items.length == 0}}" class="empty-card">
+      <view class="state-title">还没有知识资料</view>
+      <view class="state-copy">选择一个 Markdown 文件开始导入</view>
+    </view>
+
+    <view wx:else class="history-list">
+      <view
+        wx:for="{{items}}"
+        wx:key="id"
+        class="history-item"
+      >
+        <view class="history-title-row">
+          <view class="history-name">{{item.original_filename}}</view>
+          <view class="scope-tag {{item.scopeLabel}}">{{item.scopeLabel}}</view>
+        </view>
+        <view class="history-meta">
+          <view class="processing-copy">正在提取知识点</view>
+          <view class="processing-tag">处理中</view>
+        </view>
+        <view class="history-time state-copy">{{item.uploadedAtLabel}}</view>
+      </view>
+    </view>
+  </block>
+</view>

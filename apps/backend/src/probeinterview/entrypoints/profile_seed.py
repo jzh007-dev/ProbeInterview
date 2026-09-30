@@ -94,3 +94,23 @@ def seed_demo_profile(engine: Engine) -> None:
                 },
             ],
         )
+        connection.execute(
+            text(
+                """
+                insert into knowledge_upload_policies (user_id)
+                values (:user_id)
+                on conflict (user_id) do nothing
+                """
+            ),
+            {"user_id": DEMO_USER_ID},
+        )
+        connection.execute(
+            text(
+                """
+                insert into user_capabilities (user_id, capability)
+                values (:user_id, 'knowledge.submit_public')
+                on conflict (user_id, capability) do nothing
+                """
+            ),
+            {"user_id": DEMO_USER_ID},
+        )

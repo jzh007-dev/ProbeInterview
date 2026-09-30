@@ -45,8 +45,10 @@ uv run python -m probeinterview.entrypoints.database_initializer
 The initializer upgrades the configured database to the Alembic head revision.
 With the development example's
 `PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED=true`, it then idempotently creates
-the local actor's user, WeChat-shaped identity, and two target profiles. It
-does not create a `user_resume` row because no file has been uploaded.
+the local actor's user, WeChat-shaped identity, two target profiles, default
+knowledge upload policy, and `knowledge.submit_public` capability. It does not
+create a `user_resume` or knowledge source row because no file has been
+uploaded.
 
 API process:
 
@@ -77,6 +79,71 @@ The development response has the explicit default target profile,
 replacement, preview, and download belong to the later simulation feature and
 are intentionally unavailable in this change.
 
+The same seeded actor has `knowledge.submit_public` and a default knowledge
+upload policy of two successfully stored files per Shanghai calendar day and
+100 effective sources. From the repository root, upload one Markdown file
+through the deterministic fake object storage:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  -H 'Idempotency-Key: local-knowledge-1' \
+  -F 'scope=PRIVATE' \
+  -F 'file=@docs/architecture.md;type=text/markdown' \
+  http://127.0.0.1:8000/api/v1/me/knowledge-sources
+```
+
+Repeating the same command returns the same source without storing or counting
+a second copy. List only the current actor's stored records and quota:
+
+```bash
+curl --fail --silent --show-error \
+  http://127.0.0.1:8000/api/v1/me/knowledge-sources
+```
+
+These endpoints store the original bytes and return
+`PENDING_EXTRACTION`; they do not parse Markdown or enqueue a Celery task.
+
+## Optional Alibaba OSS smoke test
+
+Normal development, unit tests and Compose use
+`PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER=fake`. To verify the real adapter
+against the already provisioned private test bucket, copy
+`infra/compose/.env.oss.example` to the ignored
+`infra/compose/.env.oss` file and fill the RAM access key values:
+
+```text
+PROBEINTERVIEW_OSS_ENDPOINT=https://oss-cn-shanghai.aliyuncs.com
+PROBEINTERVIEW_OSS_BUCKET=probeinterview-test-kb-bucket
+PROBEINTERVIEW_OSS_ACCESS_KEY_ID=<RAM access key id>
+PROBEINTERVIEW_OSS_ACCESS_KEY_SECRET=<RAM access key secret>
+```
+
+Do not commit those values or put them in command history. The ignored file is
+consumed only when the explicit OSS Compose override is selected:
+
+```bash
+docker compose \
+  --env-file infra/compose/.env.oss \
+  --project-directory infra/compose \
+  -f infra/compose/compose.yaml \
+  -f infra/compose/compose.oss.yaml \
+  up --build --detach --wait
+```
+
+Confirm the running API reports the `oss` adapter without printing credentials,
+then run the opt-in write/delete smoke test with the same variables loaded:
+
+```bash
+cd apps/backend
+uv run pytest -m oss_smoke
+```
+
+The smoke test writes one uniquely named object below
+`knowledge-sources/` and deletes it before returning. If the process is
+interrupted after the write, remove only that unique smoke object through the
+existing bucket administration workflow. This project does not create,
+configure, or change the bucket or its RAM authorization.
+
 ## Run the local Compose topology
 
 From the repository root, start the one-shot database initializer plus Caddy,
@@ -98,6 +165,30 @@ same seeded overview through the gateway:
 ```bash
 curl --fail --silent --show-error \
   http://127.0.0.1:8080/api/v1/me/overview
+```
+
+The fake-backed knowledge-source examples above also work through the gateway
+by replacing port `8000` with `8080`.
+
+After rebuilding the local topology, run the beta smoke against the same
+gateway used by the WeChat developer tools:
+
+```bash
+scripts/test-beta-smoke
+```
+
+This read-only acceptance check rejects custom-component WXSS selectors that
+the WeChat compiler does not allow, runs the upload-page client/component tests
+and TypeScript check, and verifies that the running API exposes the
+knowledge-source route and returns a safe typed owner collection. It does not
+upload or change the development actor's quota. The isolated
+`scripts/test-compose-topology` command covers upload, idempotent replay and
+listing without polluting development data. Override the gateway only when
+intentionally testing another environment:
+
+```bash
+PROBEINTERVIEW_BETA_BASE_URL=https://beta.example.invalid \
+  scripts/test-beta-smoke
 ```
 
 Runtime health endpoints are available through the gateway:
@@ -141,7 +232,9 @@ the initializer performs migrations only.
 ```bash
 scripts/check-skeleton
 scripts/test-profile-postgres
+scripts/test-knowledge-source-postgres
 scripts/test-compose-topology
+scripts/test-beta-smoke
 
 cd apps/backend
 uv run pytest tests/unit

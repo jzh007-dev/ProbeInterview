@@ -7,3 +7,4 @@
 **/__pycache__/
 apps/miniprogram/node_modules/
 apps/miniprogram/project.private.config.json
+infra/compose/.env.oss

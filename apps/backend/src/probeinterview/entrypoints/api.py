@@ -29,6 +29,13 @@ from probeinterview.identity.access.infrastructure.local_actor import build_acto
 from probeinterview.identity.access.infrastructure.queries import (
     SqlAlchemyIdentityDisplayReader,
 )
+from probeinterview.knowledge.source.api.router import router as knowledge_source_router
+from probeinterview.knowledge.source.application.errors import KnowledgeSourceError
+from probeinterview.knowledge.source.application.service import KnowledgeSourceService
+from probeinterview.knowledge.source.infrastructure.repository import (
+    SqlAlchemyKnowledgeSourceRepository,
+)
+from probeinterview.knowledge.source.infrastructure.storage import build_object_storage
 from probeinterview.platform.foundation.api.contracts import (
     FieldViolation,
     HealthResource,
@@ -70,15 +77,21 @@ def create_app(
     app = FastAPI(title="ProbeInterview API")
     app.state.settings = resolved_settings
     app.state.readiness_checks = resolved_readiness_checks
-    app.state.actor_provider = build_actor_provider(resolved_settings)
     persistence_engine = create_engine(resolved_settings.database_url)
     session_factory = create_session_factory(persistence_engine)
+    app.state.actor_provider = build_actor_provider(resolved_settings, session_factory)
     app.state.persistence_engine = persistence_engine
     app.state.profile_overview_query = GetProfileOverview(
         identity_reader=SqlAlchemyIdentityDisplayReader(session_factory),
         candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
     )
+    app.state.object_storage = build_object_storage(resolved_settings)
+    app.state.knowledge_source_service = KnowledgeSourceService(
+        repository=SqlAlchemyKnowledgeSourceRepository(session_factory),
+        storage=app.state.object_storage,
+    )
     app.include_router(profile_router)
+    app.include_router(knowledge_source_router)
 
     @app.middleware("http")
     async def add_request_id(
@@ -226,6 +239,42 @@ def create_app(
                 instance=request.url.path,
                 code="profile_overview_incomplete",
                 request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(KnowledgeSourceError)
+    async def knowledge_source_problem(
+        request: Request,
+        error: KnowledgeSourceError,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title=error.title,
+                status=error.status,
+                detail=error.detail,
+                instance=request.url.path,
+                code=error.code,
+                request_id=request.state.request_id,
+                errors=[
+                    FieldViolation(
+                        field=item.field,
+                        message=item.message,
+                        code=item.code,
+                    )
+                    for item in error.errors
+                ]
+                or None,
+                quota=(
+                    {
+                        "timezone": error.quota.timezone,
+                        "daily_limit": error.quota.daily_limit,
+                        "daily_used": error.quota.daily_used,
+                        "effective_source_limit": error.quota.effective_source_limit,
+                        "effective_source_count": error.quota.effective_source_count,
+                    }
+                    if error.quota is not None
+                    else None
+                ),
             )
         )
 
