@@ -1,0 +1,124 @@
+.login-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  box-sizing: border-box;
+  background: linear-gradient(155deg, #f7f7f2, #edf1ee 62%, #f4f0f5);
+}
+
+.login-card {
+  display: flex;
+  width: 100%;
+  max-width: 600rpx;
+  flex-direction: column;
+  gap: 24rpx;
+  padding: 56rpx 44rpx;
+  box-sizing: border-box;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 18rpx 48rpx rgba(51, 64, 57, 0.08);
+}
+
+.login-kicker {
+  color: #7c8881;
+  font-size: 24rpx;
+  letter-spacing: 4rpx;
+}
+
+.login-title {
+  color: #334039;
+  font-size: 48rpx;
+  font-weight: 500;
+}
+
+.login-copy,
+.login-hint {
+  color: #7c8881;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.form-title {
+  color: #334039;
+  font-size: 36rpx;
+  font-weight: 500;
+}
+
+.login-button {
+  margin-top: 8rpx;
+  border-radius: 999rpx;
+  background: #334039;
+  color: #f7f8f4;
+  font-size: 30rpx;
+}
+
+.login-button[disabled] {
+  background: rgba(51, 64, 57, 0.4);
+  color: #f7f8f4;
+}
+
+.login-error {
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: rgba(224, 46, 42, 0.08);
+  color: #b3261e;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.avatar-preview {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  background: #edf1ee;
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c8881;
+  font-size: 26rpx;
+}
+
+.avatar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
+}
+
+.avatar-choice {
+  padding: 0 32rpx;
+  border-radius: 999rpx;
+  background: #edf1ee;
+  color: #334039;
+  font-size: 26rpx;
+  line-height: 2.4;
+}
+
+.avatar-default-action {
+  color: #7c8881;
+  font-size: 24rpx;
+  text-decoration: underline;
+}
+
+.nickname-input {
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f6f7f8;
+  font-size: 30rpx;
+}
+
+.nickname-placeholder {
+  color: #a8b2ab;
+}

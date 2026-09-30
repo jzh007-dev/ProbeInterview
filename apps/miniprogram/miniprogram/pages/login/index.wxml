@@ -1,0 +1,66 @@
+<view class="login-shell">
+  <view class="login-card">
+    <view class="login-kicker">ProbeInterview</view>
+    <view class="login-title">模拟面试训练</view>
+    <view class="login-copy">使用微信登录，开始你的面试准备</view>
+
+    <block wx:if="{{state.phase == 'idle' || state.phase == 'error' || state.phase == 'exchanging'}}">
+      <view wx:if="{{state.errorMessage}}" class="login-error">
+        {{state.errorMessage}}
+      </view>
+      <button
+        class="login-button"
+        disabled="{{state.phase == 'exchanging'}}"
+        bindtap="onLoginTap"
+      >
+        {{state.phase == 'exchanging' ? '正在登录…' : '微信登录'}}
+      </button>
+      <view class="login-hint">仅使用你的微信昵称与头像创建展示资料</view>
+    </block>
+
+    <block wx:elif="{{state.phase == 'registration_required' || state.phase == 'registering'}}">
+      <view class="form-title">完善注册信息</view>
+
+      <view class="avatar-row">
+        <image
+          wx:if="{{state.avatarTempPath}}"
+          class="avatar-preview"
+          src="{{state.avatarTempPath}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="avatar-preview avatar-fallback">默认</view>
+        <view class="avatar-actions">
+          <button
+            class="avatar-choice"
+            open-type="chooseAvatar"
+            bind:chooseavatar="onChooseAvatar"
+          >选择头像</button>
+          <view class="avatar-default-action" bindtap="onChooseDefaultAvatar">
+            使用默认头像
+          </view>
+        </view>
+      </view>
+
+      <input
+        class="nickname-input"
+        type="nickname"
+        placeholder="请输入昵称"
+        placeholder-class="nickname-placeholder"
+        value="{{state.nickname}}"
+        bindinput="onNicknameInput"
+      />
+
+      <view wx:if="{{state.errorMessage}}" class="login-error">
+        {{state.errorMessage}}
+      </view>
+      <button
+        class="login-button"
+        disabled="{{state.phase == 'registering'}}"
+        bindtap="onSubmitRegistration"
+      >
+        {{state.phase == 'registering' ? '正在注册…' : '完成注册'}}
+      </button>
+      <view class="login-hint">默认头像表示不上传自定义图片</view>
+    </block>
+  </view>
+</view>

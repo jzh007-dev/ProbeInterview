@@ -7,7 +7,7 @@
 |---|---|---|
 | ① 后端认证基础 | 配置类型化、对象存储端口、迁移 0003、交换+会话、注册+头像 | ✅ 完成 |
 | ② 全局鉴权与概览 | 受保护路由、Bearer 会话解析、可空概览、PUT 目标画像 | ✅ 完成 |
-| ③ 小程序认证边界 | auth store v1/v2、transport、登录协调器、登录页 | ⬜ |
+| ③ 小程序认证边界 | auth store v1/v2、transport、登录协调器、登录页 | ✅ 完成 |
 | ④ 页面改造与收尾 | 首页/我的/上传改造、Compose/smoke、完整验收 | ⬜ |
 
 ## 为什么
@@ -48,9 +48,15 @@ AppSecret 仅服务端；`session_key` 不下发不持久化。
 `authentication_required`，概览契约改为可空字段并移除了 409/404 错误路径。但 Compose
 拓扑检查（`scripts/test-compose-topology` 尾部 4 个匿名 HTTP 断言）和 beta smoke 仍按
 旧匿名流程编写，在本分支上会失败；`docs/development.md` 的 curl 示例也未携带 token。
-这属于阶段 ③/④ 的验收范围（等价于原 change 任务 8.1/8.2）：补齐 fake 会话下发与
+这属于阶段 ④ 的收尾范围（等价于原 change 任务 8.1/8.2）：补齐 fake 会话下发与
 smoke 携带 token、更新文档示例后，两者转绿。CI 中 compose-topology job 在本 feature
 合并前预期为红。
+
+小程序侧阶段 ③ 已落地：`pages/login/index` 为启动首屏（app.json 首项），auth store
+v1 + display cache v2 + 共享 transport + 登录协调器就绪。但首页/我的/上传三个 tab
+仍走旧的匿名 `wx.request` 封装（`services/profile-overview.ts`、
+`services/knowledge-sources.ts`），在受保护后端下会 401；页面迁移到共享 transport、
+首页概览回退删除、上传失效清 owner 记录均属阶段 ④。
 
 ## 小程序页面与模块
 
@@ -104,11 +110,11 @@ smoke 携带 token、更新文档示例后，两者转绿。CI 中 compose-topol
 - [x] actor 并发首写串行化 + 部分唯一约束兜底；客户端伪造他人 profile ID 不可读写
 
 **小程序**
-- [ ] auth store(v1) + display cache(v2，可空过期头像/画像摘要) 读写往返、版本失效、损坏清理、一键双清
-- [ ] 共享 JSON/multipart transport：只给受保护调用附 Bearer；调用方不能覆盖 Authorization；幂等键保留
-- [ ] 401 单飞失效：双清、原调用失败一次、重进登录页、无静默登录/重试
-- [ ] 登录协调器：先校验两个响应资源再落缓存；半写回滚；只有显式登录动作才调 `wx.login`
-- [ ] 登录页全状态机；启动只做缓存校验；重复提交阻断
+- [x] auth store(v1) + display cache(v2，可空过期头像/画像摘要) 读写往返、版本失效、损坏清理、一键双清
+- [x] 共享 JSON/multipart transport：只给受保护调用附 Bearer；调用方不能覆盖 Authorization；幂等键保留
+- [x] 401 单飞失效：双清、原调用失败一次、重进登录页、无静默登录/重试
+- [x] 登录协调器：先校验两个响应资源再落缓存；半写回滚；只有显式登录动作才调 `wx.login`
+- [x] 登录页全状态机；启动只做缓存校验；重复提交阻断
 - [ ] 首页：缓存命中零 overview 请求；缓存缺失/损坏进登录；空画像提示 + `wx.switchTab` 到"我的"；失效后清空上一用户内容
 - [ ] "我的"：只读昵称头像 + 可编辑目标画像；保存成功原子更新缓存，失败保留输入与旧缓存；首页返回时观察到新值
 - [ ] 上传 tab 迁移到共享 transport；失效后清 owner 记录；配额/上传行为不变

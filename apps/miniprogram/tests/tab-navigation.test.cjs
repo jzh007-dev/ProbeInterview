@@ -35,7 +35,7 @@ test("declares native tab state, renders home, and preserves the remaining route
   ]
 
   expect(app.tabBar.list.map(({pagePath, text}) => [pagePath, text])).toEqual(expected)
-  expect(app.pages).toEqual(expected.map(([pagePath]) => pagePath))
+  expect(app.pages).toEqual(["pages/login/index", ...expected.map(([pagePath]) => pagePath)])
   expect(app.tabBar.selectedColor).toBe("#334039")
   expect(project.setting.urlCheck).toBe(false)
   const iconPaths = []
