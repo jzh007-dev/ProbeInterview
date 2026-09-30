@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Single verification entry.
+#
+#   scripts/verify          fast gate: format, lint, types, unit tests.
+#                           Runs in seconds; pre-commit and every commit use it.
+#   scripts/verify --full   adds PostgreSQL integration tests in an isolated
+#                           Docker container. Required before merge; CI runs it.
+#
+# D4 topology and D5/D6 gateway checks stay separate by design:
+#   scripts/test-compose-topology   (static Compose topology assertions)
+#   scripts/test-beta-smoke         (running gateway; see docs/workflow.md)
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+backend_dir="${repo_root}/apps/backend"
+miniprogram_dir="${repo_root}/apps/miniprogram"
+
+full_mode="false"
+case "${1:-}" in
+  "") ;;
+  --full) full_mode="true" ;;
+  *)
+    printf 'usage: scripts/verify [--full]\n' >&2
+    exit 2
+    ;;
+esac
+
+container_name=""
+
+cleanup() {
+  if [[ -n "${container_name}" ]]; then
+    docker rm --force --volumes "${container_name}" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
+
+step() {
+  printf '\n==> %s\n' "$1"
+}
+
+step "backend: ruff format"
+( cd "${backend_dir}" && uv run ruff format --check migrations src tests )
+
+step "backend: ruff check"
+( cd "${backend_dir}" && uv run ruff check migrations src tests )
+
+step "backend: mypy"
+( cd "${backend_dir}" && uv run mypy )
+
+step "backend: unit tests"
+( cd "${backend_dir}" && uv run pytest tests/unit -q )
+
+step "miniprogram: jest"
+( cd "${miniprogram_dir}" && npm test -- --silent )
+
+step "miniprogram: typecheck"
+( cd "${miniprogram_dir}" && npm run typecheck )
+
+if [[ "${full_mode}" == "true" ]]; then
+  command -v docker >/dev/null || {
+    printf 'Docker is required for "scripts/verify --full"\n' >&2
+    exit 1
+  }
+  container_name="probeinterview-verify-pg-${$}"
+  knowledge_database="probeinterview_knowledge_source_test_${$}"
+  profile_database="probeinterview_profile_test_${$}"
+  step "integration: starting isolated PostgreSQL (${container_name})"
+  docker run \
+    --detach \
+    --name "${container_name}" \
+    --env "POSTGRES_DB=${knowledge_database}" \
+    --env "POSTGRES_PASSWORD=probe/interview" \
+    --env POSTGRES_USER=probeinterview \
+    --publish "127.0.0.1::5432" \
+    pgvector/pgvector:0.8.1-pg17 >/dev/null
+  for _ in {1..60}; do
+    if docker exec "${container_name}" \
+      pg_isready --username probeinterview --dbname "${knowledge_database}" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
+  docker exec "${container_name}" \
+    pg_isready --username probeinterview --dbname "${knowledge_database}" >/dev/null
+  docker exec "${container_name}" \
+    psql --username probeinterview --dbname "${knowledge_database}" \
+    --command "CREATE DATABASE ${profile_database}" >/dev/null
+  host_binding="$(docker port "${container_name}" 5432/tcp)"
+  host_port="${host_binding##*:}"
+  knowledge_database_url="postgresql+psycopg://probeinterview:probe%2Finterview@127.0.0.1:${host_port}/${knowledge_database}"
+  profile_database_url="postgresql+psycopg://probeinterview:probe%2Finterview@127.0.0.1:${host_port}/${profile_database}"
+  step "integration: pytest tests/integration/knowledge_source"
+  (
+    cd "${backend_dir}" && \
+      PROBEINTERVIEW_DESTRUCTIVE_DATABASE_TEST=1 \
+      PROBEINTERVIEW_TEST_DATABASE_URL="${knowledge_database_url}" \
+      uv run pytest tests/integration/knowledge_source -q
+  )
+  step "integration: pytest tests/integration/profile"
+  (
+    cd "${backend_dir}" && \
+      PROBEINTERVIEW_DESTRUCTIVE_DATABASE_TEST=1 \
+      PROBEINTERVIEW_TEST_DATABASE_URL="${profile_database_url}" \
+      uv run pytest tests/integration/profile -q
+  )
+fi
+
+printf '\nverify: all checks passed\n'

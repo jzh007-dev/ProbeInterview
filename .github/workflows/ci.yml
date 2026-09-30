@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify-full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: apps/miniprogram/.node-version
+          cache: npm
+          cache-dependency-path: apps/miniprogram/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: uv sync --frozen --all-groups
+
+      - name: Install miniprogram dependencies
+        working-directory: apps/miniprogram
+        run: npm ci
+
+      - name: Verify (fast + integration)
+        run: scripts/verify --full
+
+  compose-topology:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose topology check
+        run: scripts/test-compose-topology

@@ -1,5 +1,8 @@
 # ProbeInterview MVP 项目路线图
 
+> **已被取代（2026-10-01）**：排序与范围管理迁移至 `BACKLOG.md` + `docs/features/`，
+> 过程规则见 `docs/workflow.md`。本文件仅作历史参考，不再更新。
+
 更新时间：2026-09-29
 
 ## 1. 文档目的

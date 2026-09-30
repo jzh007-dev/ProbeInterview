@@ -1,62 +1,34 @@
 # ProbeInterview Agent Rules
 
-## Read before working
+## Workflow
 
-Before planning or changing this project, read:
+- Work comes from `BACKLOG.md`. One feature per session. Before coding, read that feature's file under `docs/features/` (create it from `docs/features/_template.md` if it does not exist).
+- Follow `docs/workflow.md` (D0–D6). Follow `docs/recipes.md` for standard implementation patterns; do not invent new structure.
+- Completion = every acceptance bullet has a test and `scripts/verify --full` is green. Commit per logical unit; never commit with a red `scripts/verify` (the pre-commit hook enforces this).
+- Scope deviations: edit the feature file directly and continue. Only decisions that change stack, module boundaries or data ownership require an ADR first.
+- Deferred RAG choices (chunking, embedding dimensions, index types, retrieval weights, rerank thresholds) still require an explicit confirmed design before implementation.
 
-1. `docs/architecture.md`
-2. `docs/adr/README.md` and the ADRs relevant to the task
-3. `openspec/config.yaml`
-4. The complete artifacts for the active OpenSpec change
-5. For UI work, `docs/design/visuals/README.md` and the relevant visual HTML
+## Verification
+
+- `scripts/verify` — fast gate (format, lint, mypy, backend unit, miniprogram jest + typecheck). Runs on every commit.
+- `scripts/verify --full` — adds PostgreSQL integration tests in an isolated Docker container. Run before merge; CI runs it on every push/PR.
+- `scripts/test-compose-topology` — Compose topology assertions (CI).
+- `scripts/test-beta-smoke` — read-only check against a running gateway (`PROBEINTERVIEW_BETA_BASE_URL` to override).
+- Local startup: `docs/development.md`. Deploy and post-deploy verification: `docs/ops.md`.
+
+## Architecture constraints (hard)
+
+- Monorepo, module-first modular monolith (ADR 0001): backend Python 3.12 + uv + FastAPI + Pydantic 2 + SQLAlchemy 2 + Alembic; native WeChat mini program in TypeScript + TDesign.
+- PostgreSQL is the source of truth; pgvector data is derived/rebuildable; Redis is not product state. Celery messages carry stable IDs, never private content or full mutable payloads.
+- Domain/application code must not import vendor SDKs or another module's repository/ORM model. External services are accessed through ports and infrastructure adapters.
+- Actor and public/owner scope filters must be applied before database or vector retrieval.
+- Success APIs return typed resources; errors use RFC 9457 Problem Details; async creation returns 202 + Location with Idempotency-Key where retryable.
+- Logs must not contain private source text, request bodies, complete prompts/model responses, secrets or tokens.
+- Never introduce a new language, framework, database, cloud service or major dependency without an accepted ADR. Discuss with the user first.
 
 ## Sources of truth
 
-- OpenSpec is the source of truth for feature scope, requirements, design and tasks.
-- `docs/architecture.md` and accepted ADRs are the source of truth for project-level technical decisions.
-- Code and tests must remain consistent with the active change. If implementation reveals a required requirement or design change, stop and obtain explicit user confirmation before editing planning artifacts.
-- User silence is not confirmation.
-
-`deliver-probeinterview-mvp` is reference-only and no longer an active implementation baseline. It may overlap or conflict with newer changes. Do not reuse its rejected Node/TypeScript backend implementation or infer requirements from that code.
-
-## Architecture constraints
-
-- Use the Monorepo and module-first modular monolith structure defined by ADR 0001.
-- Backend code uses Python 3.12, uv, FastAPI, Pydantic 2, SQLAlchemy 2 and Alembic.
-- The native WeChat mini program uses TypeScript and TDesign.
-- PostgreSQL is the source of truth; pgvector data is derived and Redis is not product state.
-- Celery messages carry stable IDs, not private content or complete mutable payloads.
-- Domain/application code must not import vendor SDKs or another module's repository/ORM model.
-- External services are accessed through ports and infrastructure adapters.
-- Actor and public/owner scope filters must be applied before database or vector retrieval.
-- Success APIs return typed resources. Errors use RFC 9457 Problem Details.
-- Logs must not contain private source text, request bodies, complete prompts/model responses, secrets or tokens.
-
-Do not introduce a new language, framework, database, cloud service or major dependency unless an accepted ADR explicitly allows it. Discuss the decision with the user first, then add or supersede an ADR and synchronize `docs/architecture.md` and `openspec/config.yaml`.
-
-## Change and task discipline
-
-- Work only inside the active change's proposal, specs, design and tasks.
-- Tasks must be delivered as testable vertical behavior, not as disconnected controller/service/repository batches.
-- Every requirement scenario must have automated coverage before a change is considered complete.
-- Do not implement deferred RAG choices such as chunking, embedding dimensions, index types, hybrid retrieval weights or rerank thresholds without a confirmed design in the consuming change.
-
-## Commands
-
-Available setup and focused-check commands:
-
-- backend install: `cd apps/backend && uv sync --frozen --all-groups`;
-- mini-program install: `cd apps/miniprogram && npm ci`;
-- clean-room skeleton check: `scripts/check-skeleton`;
-- backend unit tests: `cd apps/backend && uv run pytest tests/unit`;
-- backend format/lint/type checks: `cd apps/backend && uv run ruff format --check migrations src tests && uv run ruff check migrations src tests && uv run mypy`;
-- mini-program type check: `cd apps/miniprogram && npm run typecheck`;
-- Compose topology check: `scripts/test-compose-topology`;
-- running-development beta smoke: `scripts/test-beta-smoke`;
-- local API and Worker startup: see `docs/development.md`.
-
-Docker Compose startup and shutdown are documented in `docs/development.md`.
-Database migration and the canonical full `scripts/verify` entry do not exist
-until later changes implement them. Do not invent substitutes in project
-guidance. Keep this section and `openspec/config.yaml` synchronized with
-verified commands.
+- `docs/architecture.md` + `docs/adr/` — project-level structure and decisions. ADRs are append-only; superseding requires a new ADR and syncing `docs/architecture.md`.
+- `docs/features/<name>.md` — per-feature scope, contracts and acceptance. Keep it consistent with code as you work; it is the only planning artifact for the feature.
+- `openspec/` is a frozen archive of the previous process. Do not implement from it or update it; `deliver-probeinterview-mvp` and the old `codex/deliver-probeinterview-mvp` branch are rejected references.
+- For UI work, check the relevant visual under `docs/design/visuals/`.
