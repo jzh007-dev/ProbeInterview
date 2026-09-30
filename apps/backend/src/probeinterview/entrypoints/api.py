@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from http import HTTPStatus
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import State
@@ -28,7 +28,10 @@ from probeinterview.entrypoints.identity_wiring import (
     build_wechat_exchange_service,
     build_wechat_registration_service,
 )
-from probeinterview.identity.access.api.dependencies import CurrentActorUnavailable
+from probeinterview.identity.access.api.dependencies import (
+    AuthenticationRequired,
+    current_actor,
+)
 from probeinterview.identity.access.api.router import router as wechat_auth_router
 from probeinterview.identity.access.application.registration import (
     RegistrationFieldInvalid,
@@ -39,7 +42,9 @@ from probeinterview.identity.access.application.wechat import (
     WeChatCodeExchangeFailed,
     WeChatServiceUnavailable,
 )
-from probeinterview.identity.access.infrastructure.local_actor import build_actor_provider
+from probeinterview.identity.access.infrastructure.authenticators import (
+    build_actor_authenticator,
+)
 from probeinterview.identity.access.infrastructure.queries import (
     SqlAlchemyIdentityDisplayReader,
 )
@@ -78,6 +83,20 @@ _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _runtime_logger = logging.getLogger("probeinterview.runtime")
 
 
+def mount_business_routers(app: FastAPI, *routers: APIRouter) -> None:
+    """Mount business routers behind the structured authentication boundary.
+
+    Authentication is enforced once at the mount point, so every current and
+    future business route stays protected without each handler remembering
+    to resolve the Authorization header itself.
+    """
+
+    protected = APIRouter(dependencies=[Depends(current_actor)])
+    for router in routers:
+        protected.include_router(router)
+    app.include_router(protected)
+
+
 def create_app(
     settings: Settings | None = None,
     readiness_checks: Mapping[str, Callable[[], None]] | None = None,
@@ -96,7 +115,10 @@ def create_app(
     app.state.readiness_checks = resolved_readiness_checks
     persistence_engine = create_engine(resolved_settings.database_url)
     session_factory = create_session_factory(persistence_engine)
-    app.state.actor_provider = build_actor_provider(resolved_settings, session_factory)
+    app.state.actor_authenticator = build_actor_authenticator(
+        resolved_settings,
+        session_factory,
+    )
     app.state.persistence_engine = persistence_engine
     app.state.profile_overview_query = GetProfileOverview(
         identity_reader=SqlAlchemyIdentityDisplayReader(session_factory),
@@ -107,8 +129,7 @@ def create_app(
         repository=SqlAlchemyKnowledgeSourceRepository(session_factory),
         storage=app.state.object_storage,
     )
-    app.include_router(profile_router)
-    app.include_router(knowledge_source_router)
+    mount_business_routers(app, profile_router, knowledge_source_router)
     app.include_router(wechat_auth_router)
     app.state.wechat_exchange_service = build_wechat_exchange_service(
         resolved_settings,
@@ -221,18 +242,18 @@ def create_app(
             )
         )
 
-    @app.exception_handler(CurrentActorUnavailable)
-    async def actor_required_problem(
+    @app.exception_handler(AuthenticationRequired)
+    async def authentication_required_problem(
         request: Request,
-        _error: CurrentActorUnavailable,
+        _error: AuthenticationRequired,
     ) -> JSONResponse:
         return problem_response(
             ProblemDetails(
                 title="Unauthorized",
                 status=401,
-                detail="A current actor is required.",
+                detail="A valid bearer session is required.",
                 instance=request.url.path,
-                code="actor_required",
+                code="authentication_required",
                 request_id=request.state.request_id,
             )
         )

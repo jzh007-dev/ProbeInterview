@@ -57,7 +57,7 @@ def profile_database() -> Iterator[tuple[str, Engine]]:
         command.downgrade(config, "base")
 
 
-async def test_unresolved_actor_returns_401_problem_details(
+async def test_missing_bearer_session_returns_401_problem_details(
     profile_database: tuple[str, Engine],
 ) -> None:
     async with client_without_actor(profile_database[0]) as client:
@@ -72,9 +72,9 @@ async def test_unresolved_actor_returns_401_problem_details(
         "type": "about:blank",
         "title": "Unauthorized",
         "status": 401,
-        "detail": "A current actor is required.",
+        "detail": "A valid bearer session is required.",
         "instance": "/api/v1/me/overview",
-        "code": "actor_required",
+        "code": "authentication_required",
         "request_id": "missing-actor",
     }
 
