@@ -66,6 +66,8 @@ PROBEINTERVIEW_DOMAIN="probe.example.invalid" \
 PROBEINTERVIEW_DATABASE_URL="postgresql+psycopg://probeinterview:test-database-password@postgres:5432/probeinterview" \
 PROBEINTERVIEW_CELERY_BROKER_URL="redis://redis:6379/0" \
 PROBEINTERVIEW_POSTGRES_PASSWORD="test-database-password" \
+PROBEINTERVIEW_WECHAT_APP_ID="test-wechat-app-id" \
+PROBEINTERVIEW_WECHAT_APP_SECRET="test-wechat-app-secret" \
 PROBEINTERVIEW_OSS_ENDPOINT="https://oss.example.invalid" \
 PROBEINTERVIEW_OSS_BUCKET="probeinterview" \
 PROBEINTERVIEW_OSS_ACCESS_KEY_ID="test-access-key" \
@@ -116,7 +118,10 @@ expected_backend_environment = {
         "@postgres:5432/probeinterview"
     ),
     "PROBEINTERVIEW_CELERY_BROKER_URL": "redis://redis:6379/0",
-    "PROBEINTERVIEW_LOCAL_ACTOR_ENABLED": "false",
+    "PROBEINTERVIEW_AUTHENTICATION_MODE": "wechat",
+    "PROBEINTERVIEW_WECHAT_ADAPTER": "real",
+    "PROBEINTERVIEW_WECHAT_APP_ID": "test-wechat-app-id",
+    "PROBEINTERVIEW_WECHAT_APP_SECRET": "test-wechat-app-secret",
     "PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED": "false",
     "PROBEINTERVIEW_FOUNDATION_PROBE_ENABLED": "false",
     "PROBEINTERVIEW_OBJECT_STORAGE_ADAPTER": "oss",

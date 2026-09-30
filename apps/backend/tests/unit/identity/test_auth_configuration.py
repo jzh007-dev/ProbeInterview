@@ -1,5 +1,3 @@
-"""Local actor resolution boundaries."""
-
 from uuid import UUID
 
 import pytest
@@ -11,8 +9,9 @@ from probeinterview.platform.foundation.infrastructure.settings import Settings
 ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e1001")
 
 
-def test_enabled_local_actor_resolves_configured_context() -> None:
+def test_explicit_local_test_mode_resolves_persisted_actor() -> None:
     capability_reader = StubCapabilityReader(frozenset({"knowledge.submit_public"}))
+
     provider = build_actor_provider(
         make_settings(authentication_mode="local_test", local_actor_id=ACTOR_ID),
         capability_reader=capability_reader,
@@ -25,11 +24,12 @@ def test_enabled_local_actor_resolves_configured_context() -> None:
     assert capability_reader.actor_ids == [ACTOR_ID]
 
 
-def test_disabled_local_actor_resolves_nothing() -> None:
+def test_wechat_mode_does_not_fall_back_to_local_actor() -> None:
     provider = build_actor_provider(
         make_settings(
             authentication_mode="wechat",
             local_actor_id=None,
+            wechat_adapter="fake",
             wechat_app_id="test-app",
         )
     )
@@ -37,7 +37,7 @@ def test_disabled_local_actor_resolves_nothing() -> None:
     assert provider.resolve() is None
 
 
-def test_provider_factory_refuses_production_even_if_validation_is_bypassed() -> None:
+def test_provider_factory_refuses_local_test_outside_test_if_validation_is_bypassed() -> None:
     settings = Settings.model_construct(
         environment="production",
         database_url="postgresql+psycopg://probe:probe@db/probe",
@@ -50,21 +50,20 @@ def test_provider_factory_refuses_production_even_if_validation_is_bypassed() ->
         build_actor_provider(settings)
 
 
-def make_settings(
-    *,
-    authentication_mode: str,
-    local_actor_id: UUID | None,
-    wechat_app_id: str | None = None,
-) -> Settings:
-    return Settings(
-        environment="test",
-        database_url="postgresql+psycopg://probe:probe@db/probe",
-        celery_broker_url="redis://redis:6379/0",
-        authentication_mode=authentication_mode,
-        local_actor_id=local_actor_id,
-        wechat_app_id=wechat_app_id,
-        _env_file=None,
-    )
+def make_settings(**overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "environment": "test",
+        "database_url": "postgresql+psycopg://probe:probe@db/probe",
+        "celery_broker_url": "redis://redis:6379/0",
+        "authentication_mode": "wechat",
+        "local_actor_id": None,
+        "wechat_adapter": "fake",
+        "wechat_app_id": "test-app",
+    }
+    values.update(overrides)
+    if values["authentication_mode"] == "local_test":
+        values["wechat_app_id"] = None
+    return Settings(**values, _env_file=None)
 
 
 class StubCapabilityReader:

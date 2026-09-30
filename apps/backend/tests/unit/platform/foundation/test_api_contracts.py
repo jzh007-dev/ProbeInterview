@@ -333,6 +333,8 @@ def make_settings() -> Settings:
         environment="test",
         database_url="postgresql+psycopg://probe:probe@postgres/probe",
         celery_broker_url="redis://redis:6379/0",
-        local_actor_enabled=False,
+        authentication_mode="wechat",
+        wechat_adapter="fake",
+        wechat_app_id="test-app",
         _env_file=None,
     )

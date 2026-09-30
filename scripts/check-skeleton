@@ -72,7 +72,9 @@ UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
 UV_PROJECT_ENVIRONMENT="${scratch_dir}/backend/.venv" \
   PROBEINTERVIEW_DATABASE_URL="postgresql+psycopg://probe@localhost/probe" \
   PROBEINTERVIEW_CELERY_BROKER_URL="redis://localhost:6379/0" \
-  PROBEINTERVIEW_LOCAL_ACTOR_ENABLED="false" \
+  PROBEINTERVIEW_AUTHENTICATION_MODE="wechat" \
+  PROBEINTERVIEW_WECHAT_ADAPTER="fake" \
+  PROBEINTERVIEW_WECHAT_APP_ID="probeinterview-skeleton" \
   uv run --project "${scratch_dir}/backend" --frozen python -c \
   'import probeinterview; from probeinterview.entrypoints.api import create_app; from probeinterview.entrypoints.worker import create_celery_app; assert create_app().title == "ProbeInterview API"; assert create_celery_app().main == "probeinterview"'
 

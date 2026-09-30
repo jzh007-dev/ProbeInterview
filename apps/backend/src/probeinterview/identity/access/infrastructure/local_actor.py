@@ -47,12 +47,12 @@ def build_actor_provider(
 ) -> ActorProvider:
     """Build a non-production local provider or an unresolved provider."""
 
-    if not settings.local_actor_enabled:
+    if settings.authentication_mode != "local_test":
         return NoActorProvider()
-    if settings.environment == "production":
-        raise ValueError("production forbids local actor provider")
+    if settings.environment != "test":
+        raise ValueError("local_test authentication requires test environment")
     if settings.local_actor_id is None:
-        raise ValueError("local actor requires local_actor_id")
+        raise ValueError("local_test authentication requires local_actor_id")
     resolved_reader = capability_reader
     if resolved_reader is None:
         if session_factory is None:

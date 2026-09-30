@@ -7,6 +7,8 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "test", "production"]
+AuthenticationMode = Literal["wechat", "local_test"]
+WeChatAdapter = Literal["real", "fake"]
 ObjectStorageAdapter = Literal["fake", "oss"]
 ModelAdapter = Literal["fake", "bailian"]
 
@@ -32,8 +34,11 @@ class Settings(BaseSettings):
     database_url: str = Field(min_length=1)
     celery_broker_url: str = Field(min_length=1)
 
-    local_actor_enabled: bool = True
+    authentication_mode: AuthenticationMode = "wechat"
     local_actor_id: UUID | None = None
+    wechat_adapter: WeChatAdapter = "fake"
+    wechat_app_id: str | None = None
+    wechat_app_secret: SecretStr | None = None
     demo_profile_seed_enabled: bool = False
     foundation_probe_enabled: bool = True
 
@@ -49,13 +54,30 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_boundaries(self) -> Self:
+        if self.authentication_mode == "local_test":
+            if self.environment == "production":
+                raise ValueError("production forbids local_test authentication")
+            if self.environment != "test":
+                raise ValueError("local_test authentication requires test environment")
+            if self.local_actor_id is None:
+                raise ValueError("local_test authentication requires local_actor_id")
+            if not _is_blank(self.wechat_app_id) or not _is_blank(self.wechat_app_secret):
+                raise ValueError("local_test authentication forbids WeChat settings")
+        else:
+            if self.local_actor_id is not None:
+                raise ValueError("wechat authentication forbids local_actor_id")
+            if _is_blank(self.wechat_app_id):
+                raise ValueError("wechat authentication requires wechat_app_id")
+            if self.wechat_adapter == "real" and _is_blank(self.wechat_app_secret):
+                raise ValueError("real WeChat adapter requires wechat_app_secret")
+            if self.wechat_adapter == "fake" and not _is_blank(self.wechat_app_secret):
+                raise ValueError("fake WeChat adapter forbids wechat_app_secret")
+
         if self.environment != "production":
-            if self.local_actor_enabled and self.local_actor_id is None:
-                raise ValueError("local actor requires local_actor_id")
             return self
 
-        if self.local_actor_enabled:
-            raise ValueError("production forbids local actor")
+        if self.wechat_adapter != "real":
+            raise ValueError("production requires real WeChat adapter")
 
         if self.demo_profile_seed_enabled:
             raise ValueError("production forbids demo profile seed")

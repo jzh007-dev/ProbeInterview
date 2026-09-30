@@ -184,7 +184,7 @@ async def test_missing_default_profile_returns_409_problem_details(
 def client_for_actor(database_url: str, actor_id: UUID) -> AsyncClient:
     settings = make_settings(
         database_url,
-        local_actor_enabled=True,
+        authentication_mode="local_test",
         local_actor_id=actor_id,
     )
     app = create_app(settings=settings, readiness_checks={})
@@ -194,7 +194,7 @@ def client_for_actor(database_url: str, actor_id: UUID) -> AsyncClient:
 def client_without_actor(database_url: str) -> AsyncClient:
     settings = make_settings(
         database_url,
-        local_actor_enabled=False,
+        authentication_mode="wechat",
         local_actor_id=None,
     )
     app = create_app(settings=settings, readiness_checks={})
@@ -204,15 +204,16 @@ def client_without_actor(database_url: str) -> AsyncClient:
 def make_settings(
     database_url: str,
     *,
-    local_actor_enabled: bool,
+    authentication_mode: str,
     local_actor_id: UUID | None,
 ) -> Settings:
     return Settings(
         environment="test",
         database_url=database_url,
         celery_broker_url="redis://redis:6379/0",
-        local_actor_enabled=local_actor_enabled,
+        authentication_mode=authentication_mode,
         local_actor_id=local_actor_id,
+        wechat_app_id=("profile-integration" if authentication_mode == "wechat" else None),
         foundation_probe_enabled=False,
         _env_file=None,
     )

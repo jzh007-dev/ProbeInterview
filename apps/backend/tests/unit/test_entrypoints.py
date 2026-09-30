@@ -91,7 +91,9 @@ def make_initializer_settings(*, seed: bool) -> Settings:
         environment="test",
         database_url="postgresql+psycopg://probe:probe@db/probe",
         celery_broker_url="redis://redis:6379/0",
-        local_actor_enabled=False,
+        authentication_mode="wechat",
+        wechat_adapter="fake",
+        wechat_app_id="entrypoint-test",
         demo_profile_seed_enabled=seed,
         _env_file=None,
     )
