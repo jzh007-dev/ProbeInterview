@@ -92,7 +92,7 @@ async def test_configured_actor_ignores_arbitrary_actor_header_and_returns_seed_
     assert response.json() == {
         "id": str(DEMO_USER_ID),
         "nickname": "Bao",
-        "avatar_url": "https://example.invalid/avatars/bao.png",
+        "avatar_url": None,
         "default_target_profile": {
             "id": "018f7f64-3c6a-7d21-95a8-4d1b8c2e2001",
             "target_role": "AI 全栈开发",
@@ -226,10 +226,10 @@ def insert_profile_fixtures(engine: Engine) -> None:
         connection.execute(
             text(
                 """
-                insert into users (id, nickname, avatar_url)
+                insert into users (id, nickname, avatar_object_key)
                 values
-                    (:second_id, 'Second Actor', 'https://example.invalid/second.png'),
-                    (:incomplete_id, 'Incomplete Actor', 'https://example.invalid/incomplete.png')
+                    (:second_id, 'Second Actor', null),
+                    (:incomplete_id, 'Incomplete Actor', null)
                 """
             ),
             {

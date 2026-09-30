@@ -26,7 +26,7 @@ class SqlAlchemyIdentityDisplayReader:
         return IdentityDisplay(
             id=user.id,
             nickname=user.nickname,
-            avatar_url=user.avatar_url,
+            avatar_object_key=user.avatar_object_key,
         )
 
 

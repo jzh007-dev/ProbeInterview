@@ -27,7 +27,7 @@ class CurrentResumeResource(BaseModel):
 class ProfileOverviewResource(BaseModel):
     id: UUID
     nickname: str
-    avatar_url: str
+    avatar_url: str | None
     default_target_profile: TargetProfileResource
     current_resume: CurrentResumeResource | None
     recent_scores: list[object]

@@ -17,18 +17,17 @@ def seed_demo_profile(engine: Engine) -> None:
         connection.execute(
             text(
                 """
-                insert into users (id, nickname, avatar_url)
-                values (:id, :nickname, :avatar_url)
+                insert into users (id, nickname, avatar_object_key)
+                values (:id, :nickname, null)
                 on conflict (id) do update
                 set nickname = excluded.nickname,
-                    avatar_url = excluded.avatar_url,
+                    avatar_object_key = null,
                     updated_at = now()
                 """
             ),
             {
                 "id": DEMO_USER_ID,
                 "nickname": "Bao",
-                "avatar_url": "https://example.invalid/avatars/bao.png",
             },
         )
         connection.execute(

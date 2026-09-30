@@ -11,7 +11,7 @@ class IdentityDisplay:
 
     id: UUID
     nickname: str
-    avatar_url: str
+    avatar_object_key: str | None
 
 
 class IdentityDisplayReader(Protocol):

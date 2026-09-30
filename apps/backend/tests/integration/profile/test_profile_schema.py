@@ -2,6 +2,7 @@
 
 import os
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -53,14 +54,14 @@ def insert_user(engine: Engine, user_id: UUID | None = None) -> UUID:
         connection.execute(
             text(
                 """
-                insert into users (id, nickname, avatar_url)
-                values (:id, :nickname, :avatar_url)
+                insert into users (id, nickname, avatar_object_key)
+                values (:id, :nickname, :avatar_object_key)
                 """
             ),
             {
                 "id": resolved_user_id,
                 "nickname": f"user-{resolved_user_id}",
-                "avatar_url": "https://example.invalid/avatar.png",
+                "avatar_object_key": f"avatars/{resolved_user_id}/default.png",
             },
         )
     return resolved_user_id
@@ -369,3 +370,226 @@ def test_resume_metadata_constraints(
 
     with pytest.raises(IntegrityError):
         insert_resume(profile_engine, values)
+
+
+def test_users_replace_avatar_url_with_nullable_object_key(
+    profile_engine: Engine,
+) -> None:
+    """Avatar truth is a unique, non-blank, nullable provider-neutral key."""
+
+    inspector = inspect(profile_engine)
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    assert "avatar_url" not in user_columns
+    assert "avatar_object_key" in user_columns
+
+    first_user = insert_user(profile_engine)
+    insert_user(profile_engine)
+
+    with profile_engine.connect() as connection:
+        stored_keys = (
+            connection.execute(text("select avatar_object_key from users order by id"))
+            .scalars()
+            .all()
+        )
+    assert all(key is not None for key in stored_keys)
+
+    with pytest.raises(IntegrityError), profile_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                    insert into users (id, nickname, avatar_object_key)
+                    values (:id, :nickname, :avatar_object_key)
+                    """
+            ),
+            {
+                "id": uuid4(),
+                "nickname": "duplicate-avatar",
+                "avatar_object_key": f"avatars/{first_user}/default.png",
+            },
+        )
+
+    with pytest.raises(IntegrityError), profile_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                    insert into users (id, nickname, avatar_object_key)
+                    values (:id, :nickname, :avatar_object_key)
+                    """
+            ),
+            {
+                "id": uuid4(),
+                "nickname": "blank-avatar",
+                "avatar_object_key": "   ",
+            },
+        )
+
+
+def insert_registration_attempt(
+    engine: Engine,
+    values: dict[str, object],
+) -> None:
+    """Insert one registration attempt using explicit timestamps."""
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                insert into wechat_registration_attempts (
+                    id,
+                    token_digest,
+                    app_id,
+                    openid,
+                    unionid,
+                    created_at,
+                    expires_at,
+                    consumed_at
+                )
+                values (
+                    :id,
+                    :token_digest,
+                    :app_id,
+                    :openid,
+                    :unionid,
+                    :created_at,
+                    :expires_at,
+                    :consumed_at
+                )
+                """
+            ),
+            values,
+        )
+
+
+def valid_attempt_values() -> dict[str, object]:
+    """Return independently specified valid registration attempt metadata."""
+
+    return {
+        "id": uuid4(),
+        "token_digest": "b" * 64,
+        "app_id": "wx8f3c2a1d9e7b6c5a",
+        "openid": "oProbeInterviewSchemaOpenId",
+        "unionid": None,
+        "created_at": datetime(2026, 10, 1, 8, 0, tzinfo=UTC),
+        "expires_at": datetime(2026, 10, 1, 8, 10, tzinfo=UTC),
+        "consumed_at": None,
+    }
+
+
+def test_registration_attempt_constraints(
+    profile_engine: Engine,
+) -> None:
+    """Attempts persist digest-only credentials with strict expiry bounds."""
+
+    inspector = inspect(profile_engine)
+    assert {column["name"] for column in inspector.get_columns("wechat_registration_attempts")} == {
+        "id",
+        "token_digest",
+        "app_id",
+        "openid",
+        "unionid",
+        "resolved_user_id",
+        "created_at",
+        "expires_at",
+        "consumed_at",
+    }
+
+    insert_registration_attempt(profile_engine, valid_attempt_values())
+
+    duplicate_values = valid_attempt_values()
+    duplicate_values["id"] = uuid4()
+    with pytest.raises(IntegrityError):
+        insert_registration_attempt(profile_engine, duplicate_values)
+
+    for _, invalid_value in (
+        ("token_digest", "short"),
+        ("token_digest", "g" * 64),
+    ):
+        invalid_values = valid_attempt_values()
+        invalid_values["id"] = uuid4()
+        invalid_values["token_digest"] = invalid_value
+        with pytest.raises(IntegrityError):
+            insert_registration_attempt(profile_engine, invalid_values)
+
+    expired_values = valid_attempt_values()
+    expired_values["id"] = uuid4()
+    expired_values["expires_at"] = expired_values["created_at"]
+    with pytest.raises(IntegrityError):
+        insert_registration_attempt(profile_engine, expired_values)
+
+
+def insert_auth_session(engine: Engine, values: dict[str, object]) -> None:
+    """Insert one auth session using explicit timestamps."""
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                insert into auth_sessions (
+                    id,
+                    user_id,
+                    token_digest,
+                    created_at,
+                    expires_at,
+                    revoked_at
+                )
+                values (
+                    :id,
+                    :user_id,
+                    :token_digest,
+                    :created_at,
+                    :expires_at,
+                    :revoked_at
+                )
+                """
+            ),
+            values,
+        )
+
+
+def valid_session_values(user_id: UUID) -> dict[str, object]:
+    """Return independently specified valid session metadata."""
+
+    return {
+        "id": uuid4(),
+        "user_id": user_id,
+        "token_digest": "c" * 64,
+        "created_at": datetime(2026, 10, 1, 8, 0, tzinfo=UTC),
+        "expires_at": datetime(2026, 10, 31, 8, 0, tzinfo=UTC),
+        "revoked_at": None,
+    }
+
+
+def test_auth_session_constraints(
+    profile_engine: Engine,
+) -> None:
+    """Sessions persist digest-only tokens with expiry and revocation truth."""
+
+    user_id = insert_user(profile_engine)
+    insert_auth_session(profile_engine, valid_session_values(user_id))
+
+    duplicate_values = valid_session_values(user_id)
+    duplicate_values["id"] = uuid4()
+    with pytest.raises(IntegrityError):
+        insert_auth_session(profile_engine, duplicate_values)
+
+    for _, invalid_value in (
+        ("token_digest", "short"),
+        ("token_digest", "z" * 64),
+    ):
+        invalid_values = valid_session_values(user_id)
+        invalid_values["id"] = uuid4()
+        invalid_values["token_digest"] = invalid_value
+        with pytest.raises(IntegrityError):
+            insert_auth_session(profile_engine, invalid_values)
+
+    expired_values = valid_session_values(user_id)
+    expired_values["id"] = uuid4()
+    expired_values["expires_at"] = expired_values["created_at"]
+    with pytest.raises(IntegrityError):
+        insert_auth_session(profile_engine, expired_values)
+
+    revoked_values = valid_session_values(user_id)
+    revoked_values["id"] = uuid4()
+    revoked_values["token_digest"] = "d" * 64
+    revoked_values["revoked_at"] = datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
+    insert_auth_session(profile_engine, revoked_values)

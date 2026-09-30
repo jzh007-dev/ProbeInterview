@@ -27,7 +27,7 @@ class ProfileOverviewIncomplete(Exception):
 class ProfileOverview:
     id: UUID
     nickname: str
-    avatar_url: str
+    avatar_url: str | None
     default_target_profile: TargetProfileOverview
     current_resume: CurrentResumeOverview | None
     recent_scores: tuple[()]
@@ -66,7 +66,7 @@ class GetProfileOverview:
         return ProfileOverview(
             id=identity.id,
             nickname=identity.nickname,
-            avatar_url=identity.avatar_url,
+            avatar_url=identity.avatar_object_key,
             default_target_profile=default_profile,
             current_resume=current_resume,
             recent_scores=(),

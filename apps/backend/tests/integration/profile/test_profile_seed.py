@@ -56,7 +56,7 @@ def seed_snapshot(engine: Engine) -> dict[str, tuple[tuple[object, ...], ...]]:
     user_values = {"user_id": DEMO_USER_ID}
     statements = {
         "users": """
-            select id, nickname, avatar_url
+            select id, nickname, avatar_object_key
             from users
             where id = :user_id
             order by id
@@ -100,7 +100,7 @@ def test_demo_profile_seed_is_idempotent_and_contains_no_resume(
             (
                 DEMO_USER_ID,
                 "Bao",
-                "https://example.invalid/avatars/bao.png",
+                None,
             ),
         ),
         "wechat_identities": (
