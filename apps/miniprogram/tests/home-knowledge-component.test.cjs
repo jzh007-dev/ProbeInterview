@@ -21,6 +21,7 @@ const OVERVIEW = {
   id: "user-mira",
   nickname: "Mira Chen",
   avatar_url: "https://example.invalid/mira.png",
+  avatar_url_expires_at: "2027-01-01T00:00:00Z",
   default_target_profile: {
     id: "profile-mira",
     target_role: "AI Platform Engineer",
@@ -61,6 +62,9 @@ test("renders an immediate cache hit without requesting the overview", () => {
     schemaVersion: CURRENT_USER_CACHE_SCHEMA_VERSION,
     userId: "user-lin",
     nickname: "Lin Qiao",
+    avatarUrl: null,
+    avatarUrlExpiresAt: null,
+    defaultTargetProfile: null,
   })
   const component = renderComponent()
 

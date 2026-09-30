@@ -23,6 +23,7 @@ interface ProfileOverviewData {
   status: ViewStatus
   overview: ProfileOverview | null
   experienceLabel: string
+  targetRoleLabel: string
   initials: string
   avatarFailed: boolean
   errorMessage: string
@@ -33,6 +34,7 @@ const INITIAL_DATA: ProfileOverviewData = {
   status: "loading",
   overview: null,
   experienceLabel: "",
+  targetRoleLabel: "",
   initials: "",
   avatarFailed: false,
   errorMessage: "",
@@ -61,18 +63,23 @@ Component({
         status: "loading",
         overview: null,
         experienceLabel: "",
+        targetRoleLabel: "",
         initials: "",
         avatarFailed: false,
         errorMessage: "",
       })
       try {
         const overview = await fetchProfileOverview()
+        const targetProfile = overview.default_target_profile
         this.setData({
           status: "success",
           overview,
-          experienceLabel: formatExperience(
-            overview.default_target_profile.relevant_experience_months,
-          ),
+          experienceLabel:
+            targetProfile === null
+              ? ""
+              : formatExperience(targetProfile.relevant_experience_months),
+          targetRoleLabel:
+            targetProfile === null ? "尚未设置目标岗位" : targetProfile.target_role,
           initials: avatarInitials(overview.nickname),
         })
       } catch {

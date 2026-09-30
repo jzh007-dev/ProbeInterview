@@ -17,8 +17,9 @@ export interface CurrentResumeOverview {
 export interface ProfileOverview {
   id: string
   nickname: string
-  avatar_url: string
-  default_target_profile: TargetProfileOverview
+  avatar_url: string | null
+  avatar_url_expires_at: string | null
+  default_target_profile: TargetProfileOverview | null
   current_resume: CurrentResumeOverview | null
   recent_scores: unknown[]
 }

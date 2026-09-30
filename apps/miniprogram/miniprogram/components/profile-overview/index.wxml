@@ -37,7 +37,7 @@
       <view class="profile-copy">
         <view class="profile-name">{{overview.nickname}}</view>
         <view class="profile-meta">
-          {{experienceLabel}} · {{overview.default_target_profile.target_role}}
+          {{experienceLabel}}{{experienceLabel && targetRoleLabel ? " · " : ""}}{{targetRoleLabel}}
         </view>
       </view>
     </view>

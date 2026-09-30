@@ -90,6 +90,7 @@ test("validates, normalizes, persists, and rejects obsolete user snapshots", () 
     id: " user-7 ",
     nickname: " Lin Qiao ",
     avatar_url: " https://example.invalid/lin.png ",
+    avatar_url_expires_at: " 2027-01-01T00:00:00Z ",
     default_target_profile: {
       id: "profile-7",
       target_role: "Platform Engineer",
@@ -103,6 +104,11 @@ test("validates, normalizes, persists, and rejects obsolete user snapshots", () 
     userId: "user-7",
     nickname: "Lin Qiao",
     avatarUrl: "https://example.invalid/lin.png",
+    avatarUrlExpiresAt: "2027-01-01T00:00:00Z",
+    defaultTargetProfile: {
+      targetRole: "Platform Engineer",
+      relevantExperienceMonths: 48,
+    },
   })
 
   writeCurrentUserSnapshot(snapshot)
