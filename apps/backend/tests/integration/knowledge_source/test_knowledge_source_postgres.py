@@ -24,7 +24,7 @@ from probeinterview.knowledge.source.application.service import KnowledgeSourceS
 from probeinterview.knowledge.source.infrastructure.repository import (
     SqlAlchemyKnowledgeSourceRepository,
 )
-from probeinterview.knowledge.source.infrastructure.storage import FakeObjectStorage
+from probeinterview.platform.foundation.infrastructure.object_storage import FakeObjectStorage
 from probeinterview.platform.foundation.infrastructure.persistence import (
     create_engine,
     create_session_factory,
@@ -412,7 +412,7 @@ class ClientContext:
             environment="test",
             database_url=database_url,
             celery_broker_url="redis://127.0.0.1:1/0",
-            local_actor_enabled=True,
+            authentication_mode="local_test",
             local_actor_id=actor_id,
             object_storage_adapter="fake",
             _env_file=None,

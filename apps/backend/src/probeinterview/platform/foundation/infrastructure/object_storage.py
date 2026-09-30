@@ -1,10 +1,17 @@
-"""Deterministic fake and Alibaba OSS object-storage adapters."""
+"""Deterministic fake and Alibaba OSS private-object adapters."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from threading import Lock
 from typing import Any
+from urllib.parse import quote, urlencode
 
-from probeinterview.knowledge.source.application.errors import ObjectStorageUnavailable
+from probeinterview.platform.foundation.application.object_storage import (
+    DEFAULT_SIGNED_GET_LIFETIME,
+    ObjectStorageUnavailable,
+    SignedObjectUrl,
+)
 from probeinterview.platform.foundation.infrastructure.settings import Settings
 
 
@@ -31,11 +38,20 @@ class StorageCall:
 class FakeObjectStorage:
     """Thread-safe deterministic storage for tests and local development."""
 
-    def __init__(self, *, fail_put: bool = False, fail_delete: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        fail_put: bool = False,
+        fail_delete: bool = False,
+        fail_sign: bool = False,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self.objects: dict[str, StoredObject] = {}
         self.calls: list[StorageCall] = []
         self.fail_put = fail_put
         self.fail_delete = fail_delete
+        self.fail_sign = fail_sign
+        self._clock = clock or (lambda: datetime.now(UTC))
         self._lock = Lock()
 
     def put(
@@ -71,12 +87,35 @@ class FakeObjectStorage:
                 raise ObjectStorageUnavailable
             self.objects.pop(object_key, None)
 
+    def sign_get_url(
+        self,
+        *,
+        object_key: str,
+        expires_in: timedelta = DEFAULT_SIGNED_GET_LIFETIME,
+    ) -> SignedObjectUrl:
+        with self._lock:
+            self.calls.append(StorageCall(operation="sign_get_url", object_key=object_key))
+            if self.fail_sign:
+                raise ObjectStorageUnavailable
+        expires_at = self._clock().astimezone(UTC) + expires_in
+        query = urlencode({"expires_at": expires_at.isoformat()})
+        return SignedObjectUrl(
+            url=f"https://object-storage.invalid/{quote(object_key)}?{query}",
+            expires_at=expires_at,
+        )
+
 
 class OssObjectStorage:
     """Private Alibaba OSS adapter with safe exception mapping."""
 
-    def __init__(self, bucket: Any) -> None:
+    def __init__(
+        self,
+        bucket: Any,
+        *,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self._bucket = bucket
+        self._clock = clock or (lambda: datetime.now(UTC))
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "OssObjectStorage":
@@ -125,6 +164,22 @@ class OssObjectStorage:
             self._bucket.delete_object(object_key)
         except Exception:
             raise ObjectStorageUnavailable from None
+
+    def sign_get_url(
+        self,
+        *,
+        object_key: str,
+        expires_in: timedelta = DEFAULT_SIGNED_GET_LIFETIME,
+    ) -> SignedObjectUrl:
+        expires_seconds = int(expires_in.total_seconds())
+        try:
+            url = self._bucket.sign_url("GET", object_key, expires_seconds)
+        except Exception:
+            raise ObjectStorageUnavailable from None
+        return SignedObjectUrl(
+            url=url,
+            expires_at=self._clock().astimezone(UTC) + expires_in,
+        )
 
 
 def build_object_storage(settings: Settings) -> FakeObjectStorage | OssObjectStorage:

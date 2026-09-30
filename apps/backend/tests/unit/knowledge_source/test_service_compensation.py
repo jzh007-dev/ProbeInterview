@@ -19,7 +19,7 @@ from probeinterview.knowledge.source.application.errors import (
     UploadFinalizationFailed,
 )
 from probeinterview.knowledge.source.application.service import KnowledgeSourceService
-from probeinterview.knowledge.source.infrastructure.storage import FakeObjectStorage
+from probeinterview.platform.foundation.infrastructure.object_storage import FakeObjectStorage
 
 ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e1001")
 NOW = datetime(2026, 9, 30, 5, 0, tzinfo=UTC)

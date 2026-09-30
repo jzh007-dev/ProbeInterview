@@ -12,11 +12,12 @@ from probeinterview.knowledge.source.application.contracts import (
     KnowledgeSourceCollection,
     KnowledgeSourceRepository,
     KnowledgeSourceUpload,
-    ObjectStorage,
     ReservationRequest,
 )
 from probeinterview.knowledge.source.application.errors import (
-    ObjectStorageUnavailable,
+    ObjectStorageUnavailable as KnowledgeObjectStorageUnavailable,
+)
+from probeinterview.knowledge.source.application.errors import (
     PublicUploadForbidden,
     UploadFinalizationFailed,
 )
@@ -24,6 +25,10 @@ from probeinterview.knowledge.source.application.validation import (
     NORMALIZED_MEDIA_TYPE,
     validate_markdown,
     validate_scope,
+)
+from probeinterview.platform.foundation.application.object_storage import (
+    ObjectStorage,
+    ObjectStorageUnavailable,
 )
 
 SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -114,10 +119,10 @@ class KnowledgeSourceService:
             )
         except ObjectStorageUnavailable:
             self._repository.fail(actor.actor_id, reservation.source_id, "storage_unavailable")
-            raise
+            raise KnowledgeObjectStorageUnavailable from None
         except Exception as error:
             self._repository.fail(actor.actor_id, reservation.source_id, "storage_unavailable")
-            raise ObjectStorageUnavailable from error
+            raise KnowledgeObjectStorageUnavailable from error
 
         try:
             return self._repository.finalize(actor.actor_id, reservation.source_id, now)

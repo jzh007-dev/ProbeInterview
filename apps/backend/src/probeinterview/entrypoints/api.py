@@ -35,7 +35,6 @@ from probeinterview.knowledge.source.application.service import KnowledgeSourceS
 from probeinterview.knowledge.source.infrastructure.repository import (
     SqlAlchemyKnowledgeSourceRepository,
 )
-from probeinterview.knowledge.source.infrastructure.storage import build_object_storage
 from probeinterview.platform.foundation.api.contracts import (
     FieldViolation,
     HealthResource,
@@ -47,6 +46,7 @@ from probeinterview.platform.foundation.infrastructure.logging import (
     bind_log_context,
     configure_logging,
 )
+from probeinterview.platform.foundation.infrastructure.object_storage import build_object_storage
 from probeinterview.platform.foundation.infrastructure.persistence import (
     create_engine,
     create_session_factory,

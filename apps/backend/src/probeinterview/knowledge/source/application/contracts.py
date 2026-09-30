@@ -88,18 +88,3 @@ class KnowledgeSourceRepository(Protocol):
         actor_id: UUID,
         quota_day: date,
     ) -> KnowledgeSourceCollection: ...
-
-
-class ObjectStorage(Protocol):
-    """Provider-neutral private object storage."""
-
-    def put(
-        self,
-        *,
-        object_key: str,
-        content: bytes,
-        content_type: str,
-        checksum_sha256: str,
-    ) -> None: ...
-
-    def delete(self, *, object_key: str) -> None: ...

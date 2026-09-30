@@ -6,7 +6,6 @@ import pytest
 
 from probeinterview.knowledge.source.application.errors import (
     InvalidUpload,
-    ObjectStorageUnavailable,
     UploadTooLarge,
 )
 from probeinterview.knowledge.source.application.validation import (
@@ -15,7 +14,10 @@ from probeinterview.knowledge.source.application.validation import (
     validate_markdown,
     validate_scope,
 )
-from probeinterview.knowledge.source.infrastructure.storage import (
+from probeinterview.platform.foundation.application.object_storage import (
+    ObjectStorageUnavailable,
+)
+from probeinterview.platform.foundation.infrastructure.object_storage import (
     FakeObjectStorage,
     OssObjectStorage,
 )

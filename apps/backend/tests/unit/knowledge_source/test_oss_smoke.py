@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from probeinterview.knowledge.source.infrastructure.storage import OssObjectStorage
+from probeinterview.platform.foundation.infrastructure.object_storage import OssObjectStorage
 from probeinterview.platform.foundation.infrastructure.settings import Settings
 
 pytestmark = pytest.mark.oss_smoke
@@ -27,7 +27,9 @@ def test_oss_write_and_delete_unique_private_object() -> None:
         environment="test",
         database_url="postgresql+psycopg://unused:unused@localhost/unused",
         celery_broker_url="redis://localhost:6379/0",
-        local_actor_enabled=False,
+        authentication_mode="wechat",
+        wechat_adapter="fake",
+        wechat_app_id="oss-smoke",
         object_storage_adapter="oss",
         _env_file=None,
     )
