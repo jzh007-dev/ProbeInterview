@@ -46,16 +46,16 @@ class CurrentUserResource(BaseModel):
     def from_snapshot(cls, snapshot: ExchangeSnapshot) -> "CurrentUserResource":
         """Build the resource from an application snapshot.
 
-        Object keys are never exposed; custom avatars become signed URLs in
-        the later display change.
+        Object keys are never exposed; custom avatars arrive as short-lived
+        signed display URLs produced by the composition root.
         """
 
         profile = snapshot.default_target_profile
         return cls(
             id=snapshot.user_id,
             nickname=snapshot.nickname,
-            avatar_url=None,
-            avatar_url_expires_at=None,
+            avatar_url=snapshot.avatar_url,
+            avatar_url_expires_at=snapshot.avatar_url_expires_at,
             default_target_profile=(
                 ExchangeTargetProfileResource(
                     target_role=profile.target_role,

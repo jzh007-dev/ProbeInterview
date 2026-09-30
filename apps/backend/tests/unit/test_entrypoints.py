@@ -1,4 +1,6 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import APIRouter
@@ -7,11 +9,16 @@ from pydantic import ValidationError
 from starlette.testclient import TestClient
 
 from probeinterview.entrypoints import api, database_initializer, worker
+from probeinterview.entrypoints.identity_wiring import ComposedExchangeSnapshotReader
 from probeinterview.identity.access.api.dependencies import current_actor
 from probeinterview.identity.access.application.authentication import (
     BearerSessionAuthenticator,
 )
+from probeinterview.identity.access.application.exchange import ExchangeSnapshot
+from probeinterview.platform.foundation.application.object_storage import SignedObjectUrl
 from probeinterview.platform.foundation.infrastructure.settings import Settings
+
+_SNAPSHOT_EXPIRES_AT = datetime(2026, 10, 1, 8, 10, tzinfo=UTC)
 
 WECHAT_APP_SETTINGS = Settings(
     environment="test",
@@ -271,6 +278,58 @@ def iter_api_routes(app: object) -> Iterator[APIRoute]:
             yield from iter_api_routes(route.original_router)
 
 
+def test_composed_snapshot_reader_signs_custom_avatars_for_display() -> None:
+    """Bootstrap snapshots carry signed avatar URLs, never object keys."""
+
+    snapshot_user_id = uuid4()
+    avatar_key = f"avatars/{snapshot_user_id}/display.png"
+    reader = ComposedExchangeSnapshotReader(
+        identity_snapshots=_StubSnapshotReader(
+            ExchangeSnapshot(
+                user_id=snapshot_user_id,
+                nickname="头像用户",
+                avatar_object_key=avatar_key,
+                default_target_profile=None,
+                capabilities=frozenset(),
+            )
+        ),
+        candidate_reader=_StubCandidateProfileReader(default_profile=None),
+        avatar_signer=_StubAvatarSigner(),
+    )
+
+    snapshot = reader.get_snapshot(snapshot_user_id)
+
+    assert snapshot is not None
+    assert snapshot.avatar_url == "https://display.invalid/signed"
+    assert snapshot.avatar_url_expires_at == _SNAPSHOT_EXPIRES_AT
+    assert snapshot.avatar_object_key == avatar_key
+
+
+def test_composed_snapshot_reader_leaves_default_avatars_unsigned() -> None:
+    """Users without a custom avatar keep null display URL fields."""
+
+    snapshot_user_id = uuid4()
+    reader = ComposedExchangeSnapshotReader(
+        identity_snapshots=_StubSnapshotReader(
+            ExchangeSnapshot(
+                user_id=snapshot_user_id,
+                nickname="默认头像用户",
+                avatar_object_key=None,
+                default_target_profile=None,
+                capabilities=frozenset(),
+            )
+        ),
+        candidate_reader=_StubCandidateProfileReader(default_profile=None),
+        avatar_signer=_StubAvatarSigner(),
+    )
+
+    snapshot = reader.get_snapshot(snapshot_user_id)
+
+    assert snapshot is not None
+    assert snapshot.avatar_url is None
+    assert snapshot.avatar_url_expires_at is None
+
+
 class _RecordingOverviewQuery:
     def __init__(self, calls: list[str]) -> None:
         self._calls = calls
@@ -301,3 +360,30 @@ class _StubSessionResolver:
 class _StubCapabilityReader:
     def get_for_actor(self, actor_id: object) -> frozenset[str]:
         return frozenset()
+
+
+class _StubSnapshotReader:
+    def __init__(self, snapshot: ExchangeSnapshot | None) -> None:
+        self._snapshot = snapshot
+
+    def get_snapshot(self, user_id: UUID) -> ExchangeSnapshot | None:
+        return self._snapshot
+
+
+class _StubCandidateProfileReader:
+    def __init__(self, *, default_profile: object) -> None:
+        self._default_profile = default_profile
+
+    def get_default_profile(self, actor_id: UUID) -> object:
+        return self._default_profile
+
+    def get_current_resume(self, actor_id: UUID) -> object:
+        return None
+
+
+class _StubAvatarSigner:
+    def sign(self, object_key: str) -> SignedObjectUrl:
+        return SignedObjectUrl(
+            url="https://display.invalid/signed",
+            expires_at=_SNAPSHOT_EXPIRES_AT,
+        )

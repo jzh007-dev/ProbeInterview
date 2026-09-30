@@ -5,6 +5,10 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from probeinterview.platform.foundation.application.object_storage import (
+    SignedObjectUrl,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class TargetProfileOverview:
@@ -32,3 +36,10 @@ class CandidateOverviewReader(Protocol):
 
     def get_current_resume(self, actor_id: UUID) -> CurrentResumeOverview | None:
         """Return display-safe current resume metadata."""
+
+
+class AvatarUrlSigner(Protocol):
+    """Sign short-lived display URLs for actor-owned private objects."""
+
+    def sign(self, object_key: str) -> SignedObjectUrl:
+        """Return one bounded-lifetime display URL for the object."""

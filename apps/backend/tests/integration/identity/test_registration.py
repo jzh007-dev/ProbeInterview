@@ -213,6 +213,10 @@ async def test_custom_avatar_registration_stores_private_object(
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "authenticated"
+    current_user = payload["current_user"]
+    assert current_user["avatar_url"] is not None
+    assert current_user["avatar_url_expires_at"] is not None
+    assert "avatar_object_key" not in current_user
 
     with database.connect() as connection:
         avatar_key = connection.execute(text("select avatar_object_key from users")).scalar_one()

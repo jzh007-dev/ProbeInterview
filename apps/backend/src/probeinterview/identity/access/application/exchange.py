@@ -30,13 +30,21 @@ class ExchangeTargetProfile:
 
 @dataclass(frozen=True, slots=True)
 class ExchangeSnapshot:
-    """Typed current-user display snapshot rebuilt from server truth."""
+    """Typed current-user display snapshot rebuilt from server truth.
+
+    ``avatar_object_key`` is internal composition input; ``avatar_url`` and
+    ``avatar_url_expires_at`` are the only avatar fields that reach a
+    response, filled by the composition root's signer when a custom avatar
+    exists.
+    """
 
     user_id: UUID
     nickname: str
     avatar_object_key: str | None
     default_target_profile: ExchangeTargetProfile | None
     capabilities: frozenset[str]
+    avatar_url: str | None = None
+    avatar_url_expires_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

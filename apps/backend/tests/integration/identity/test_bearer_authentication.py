@@ -156,7 +156,7 @@ async def test_valid_session_resolves_owner_scoped_overview(
     """A live digest resolves the owning user's overview and nothing else."""
 
     engine = identity_database[1]
-    user_id = insert_user_with_default_profile(engine, "Overview Owner")
+    user_id = insert_user(engine, "Overview Owner")
     token = issue_session(engine, user_id)
 
     async with authenticated_client(identity_database[0]) as client:
@@ -169,6 +169,8 @@ async def test_valid_session_resolves_owner_scoped_overview(
     body = response.json()
     assert body["id"] == str(user_id)
     assert body["nickname"] == "Overview Owner"
+    assert body["default_target_profile"] is None
+    assert body["avatar_url"] is None
     assert "token_digest" not in body
 
 
@@ -178,8 +180,8 @@ async def test_two_sessions_resolve_only_their_own_overview(
     """Two users' tokens stay isolated; neither sees the other's identity."""
 
     engine = identity_database[1]
-    first_id = insert_user_with_default_profile(engine, "First Owner")
-    second_id = insert_user_with_default_profile(engine, "Second Owner")
+    first_id = insert_user(engine, "First Owner")
+    second_id = insert_user(engine, "Second Owner")
     first_token = issue_session(engine, first_id)
     second_token = issue_session(engine, second_id)
 
@@ -245,25 +247,6 @@ def insert_user(engine: Engine, nickname: str) -> UUID:
                 """
             ),
             {"id": user_id, "nickname": nickname},
-        )
-    return user_id
-
-
-def insert_user_with_default_profile(engine: Engine, nickname: str) -> UUID:
-    """Insert one user whose overview satisfies the current profile contract."""
-
-    user_id = insert_user(engine, nickname)
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                """
-                insert into candidate_profiles (
-                    id, user_id, target_role, relevant_experience_months, is_default
-                )
-                values (:id, :user_id, 'Platform Engineer', 24, true)
-                """
-            ),
-            {"id": uuid4(), "user_id": user_id},
         )
     return user_id
 

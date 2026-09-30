@@ -16,14 +16,11 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from probeinterview.candidate.profile.api.router import router as profile_router
-from probeinterview.candidate.profile.application.overview import (
-    CurrentActorNotFound,
-    GetProfileOverview,
-    ProfileOverviewIncomplete,
-)
+from probeinterview.candidate.profile.application.overview import GetProfileOverview
 from probeinterview.candidate.profile.infrastructure.queries import (
     SqlAlchemyCandidateOverviewReader,
 )
+from probeinterview.entrypoints.display_signing import ObjectStorageAvatarSigner
 from probeinterview.entrypoints.identity_wiring import (
     build_wechat_exchange_service,
     build_wechat_registration_service,
@@ -120,11 +117,13 @@ def create_app(
         session_factory,
     )
     app.state.persistence_engine = persistence_engine
+    app.state.object_storage = build_object_storage(resolved_settings)
+    avatar_signer = ObjectStorageAvatarSigner(app.state.object_storage)
     app.state.profile_overview_query = GetProfileOverview(
         identity_reader=SqlAlchemyIdentityDisplayReader(session_factory),
         candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
+        avatar_signer=avatar_signer,
     )
-    app.state.object_storage = build_object_storage(resolved_settings)
     app.state.knowledge_source_service = KnowledgeSourceService(
         repository=SqlAlchemyKnowledgeSourceRepository(session_factory),
         storage=app.state.object_storage,
@@ -135,10 +134,12 @@ def create_app(
         resolved_settings,
         session_factory,
         build_wechat_exchange(resolved_settings),
+        avatar_signer,
     )
     app.state.wechat_registration_service = build_wechat_registration_service(
         session_factory,
         app.state.object_storage,
+        avatar_signer,
     )
 
     @app.middleware("http")
@@ -341,38 +342,6 @@ def create_app(
                 detail="Private object storage is temporarily unavailable.",
                 instance=request.url.path,
                 code="storage_unavailable",
-                request_id=request.state.request_id,
-            )
-        )
-
-    @app.exception_handler(CurrentActorNotFound)
-    async def actor_not_found_problem(
-        request: Request,
-        _error: CurrentActorNotFound,
-    ) -> JSONResponse:
-        return problem_response(
-            ProblemDetails(
-                title="Not Found",
-                status=404,
-                detail="The configured actor was not found.",
-                instance=request.url.path,
-                code="actor_not_found",
-                request_id=request.state.request_id,
-            )
-        )
-
-    @app.exception_handler(ProfileOverviewIncomplete)
-    async def incomplete_profile_problem(
-        request: Request,
-        _error: ProfileOverviewIncomplete,
-    ) -> JSONResponse:
-        return problem_response(
-            ProblemDetails(
-                title="Profile Overview Incomplete",
-                status=409,
-                detail="The current actor has no default target profile.",
-                instance=request.url.path,
-                code="profile_overview_incomplete",
                 request_id=request.state.request_id,
             )
         )

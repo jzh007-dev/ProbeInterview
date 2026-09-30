@@ -24,6 +24,7 @@ SECOND_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3001")
 SECOND_PROFILE_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3002")
 SECOND_RESUME_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3003")
 INCOMPLETE_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e4001")
+AVATAR_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e5001")
 
 
 def isolated_database_url() -> str:
@@ -93,6 +94,7 @@ async def test_configured_actor_ignores_arbitrary_actor_header_and_returns_seed_
         "id": str(DEMO_USER_ID),
         "nickname": "Bao",
         "avatar_url": None,
+        "avatar_url_expires_at": None,
         "default_target_profile": {
             "id": "018f7f64-3c6a-7d21-95a8-4d1b8c2e2001",
             "target_role": "AI 全栈开发",
@@ -159,26 +161,41 @@ async def test_two_configured_apps_do_not_cross_actor_boundaries(
     assert "AI 全栈开发" not in second_response.text
 
 
-async def test_missing_default_profile_returns_409_problem_details(
+async def test_missing_default_profile_returns_null_target_profile(
     profile_database: tuple[str, Engine],
 ) -> None:
+    """A user without any target profile still receives a full overview."""
+
     async with client_for_actor(profile_database[0], INCOMPLETE_ACTOR_ID) as client:
         response = await client.get(
             "/api/v1/me/overview",
             headers={"X-Request-ID": "incomplete-profile"},
         )
 
-    assert response.status_code == 409
-    assert response.headers["content-type"] == "application/problem+json"
-    assert response.json() == {
-        "type": "about:blank",
-        "title": "Profile Overview Incomplete",
-        "status": 409,
-        "detail": "The current actor has no default target profile.",
-        "instance": "/api/v1/me/overview",
-        "code": "profile_overview_incomplete",
-        "request_id": "incomplete-profile",
-    }
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(INCOMPLETE_ACTOR_ID)
+    assert body["nickname"] == "Incomplete Actor"
+    assert body["default_target_profile"] is None
+    assert body["avatar_url"] is None
+    assert body["avatar_url_expires_at"] is None
+
+
+async def test_custom_avatar_becomes_signed_url_with_expiry_metadata(
+    profile_database: tuple[str, Engine],
+) -> None:
+    """Private avatars surface only as bounded signed display URLs."""
+
+    async with client_for_actor(profile_database[0], AVATAR_ACTOR_ID) as client:
+        response = await client.get("/api/v1/me/overview")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["avatar_url"] is not None
+    assert body["avatar_url"].startswith("https://object-storage.invalid/")
+    assert "expires_at=" in body["avatar_url"]
+    assert body["avatar_url_expires_at"] is not None
+    assert "avatar_object_key" not in body
 
 
 def client_for_actor(database_url: str, actor_id: UUID) -> AsyncClient:
@@ -229,12 +246,15 @@ def insert_profile_fixtures(engine: Engine) -> None:
                 insert into users (id, nickname, avatar_object_key)
                 values
                     (:second_id, 'Second Actor', null),
-                    (:incomplete_id, 'Incomplete Actor', null)
+                    (:incomplete_id, 'Incomplete Actor', null),
+                    (:avatar_id, 'Avatar Actor', :avatar_key)
                 """
             ),
             {
                 "second_id": SECOND_ACTOR_ID,
                 "incomplete_id": INCOMPLETE_ACTOR_ID,
+                "avatar_id": AVATAR_ACTOR_ID,
+                "avatar_key": f"avatars/{AVATAR_ACTOR_ID}/018f7f64-avatar.png",
             },
         )
         connection.execute(

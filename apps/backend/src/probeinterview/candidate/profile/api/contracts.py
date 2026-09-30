@@ -28,23 +28,28 @@ class ProfileOverviewResource(BaseModel):
     id: UUID
     nickname: str
     avatar_url: str | None
-    default_target_profile: TargetProfileResource
+    avatar_url_expires_at: datetime | None
+    default_target_profile: TargetProfileResource | None
     current_resume: CurrentResumeResource | None
     recent_scores: list[object]
 
     @classmethod
     def from_application(cls, overview: ProfileOverview) -> "ProfileOverviewResource":
         current_resume = overview.current_resume
+        default_profile = overview.default_target_profile
         return cls(
             id=overview.id,
             nickname=overview.nickname,
             avatar_url=overview.avatar_url,
-            default_target_profile=TargetProfileResource(
-                id=overview.default_target_profile.id,
-                target_role=overview.default_target_profile.target_role,
-                relevant_experience_months=(
-                    overview.default_target_profile.relevant_experience_months
-                ),
+            avatar_url_expires_at=overview.avatar_url_expires_at,
+            default_target_profile=(
+                TargetProfileResource(
+                    id=default_profile.id,
+                    target_role=default_profile.target_role,
+                    relevant_experience_months=default_profile.relevant_experience_months,
+                )
+                if default_profile is not None
+                else None
             ),
             current_resume=(
                 CurrentResumeResource(
