@@ -3,9 +3,23 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from probeinterview.candidate.profile.application.overview import ProfileOverview
+
+
+class DefaultTargetProfileRequest(BaseModel):
+    """One explicit default target profile write.
+
+    No identifier is accepted: the write targets the authenticated actor's
+    single default profile, so forged foreign profile IDs are rejected as
+    unknown fields instead of being silently ignored.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    target_role: str = Field(min_length=1, max_length=2000)
+    relevant_experience_months: int = Field(ge=0, le=600)
 
 
 class TargetProfileResource(BaseModel):

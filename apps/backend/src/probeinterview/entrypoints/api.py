@@ -17,8 +17,15 @@ from starlette.responses import JSONResponse, Response
 
 from probeinterview.candidate.profile.api.router import router as profile_router
 from probeinterview.candidate.profile.application.overview import GetProfileOverview
+from probeinterview.candidate.profile.application.target_profile import (
+    SetDefaultTargetProfile,
+    TargetProfileFieldInvalid,
+)
 from probeinterview.candidate.profile.infrastructure.queries import (
     SqlAlchemyCandidateOverviewReader,
+)
+from probeinterview.candidate.profile.infrastructure.repository import (
+    SqlAlchemyDefaultTargetProfileStore,
 )
 from probeinterview.entrypoints.display_signing import ObjectStorageAvatarSigner
 from probeinterview.entrypoints.identity_wiring import (
@@ -123,6 +130,9 @@ def create_app(
         identity_reader=SqlAlchemyIdentityDisplayReader(session_factory),
         candidate_reader=SqlAlchemyCandidateOverviewReader(session_factory),
         avatar_signer=avatar_signer,
+    )
+    app.state.default_target_profile_service = SetDefaultTargetProfile(
+        store=SqlAlchemyDefaultTargetProfileStore(session_factory),
     )
     app.state.knowledge_source_service = KnowledgeSourceService(
         repository=SqlAlchemyKnowledgeSourceRepository(session_factory),
@@ -343,6 +353,29 @@ def create_app(
                 instance=request.url.path,
                 code="storage_unavailable",
                 request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(TargetProfileFieldInvalid)
+    async def target_profile_field_invalid_problem(
+        request: Request,
+        error: TargetProfileFieldInvalid,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="Target Profile Validation Error",
+                status=422,
+                detail="The target profile request contains invalid fields.",
+                instance=request.url.path,
+                code=error.code,
+                request_id=request.state.request_id,
+                errors=[
+                    FieldViolation(
+                        field=error.field,
+                        message=error.message,
+                        code=error.code,
+                    )
+                ],
             )
         )
 

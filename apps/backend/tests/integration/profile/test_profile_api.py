@@ -25,6 +25,7 @@ SECOND_PROFILE_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3002")
 SECOND_RESUME_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3003")
 INCOMPLETE_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e4001")
 AVATAR_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e5001")
+REJECTED_ACTOR_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e6001")
 
 
 def isolated_database_url() -> str:
@@ -198,6 +199,151 @@ async def test_custom_avatar_becomes_signed_url_with_expiry_metadata(
     assert "avatar_object_key" not in body
 
 
+async def test_put_default_target_profile_creates_then_updates_in_place(
+    profile_database: tuple[str, Engine],
+) -> None:
+    """One default row is created for the actor and updated on later writes."""
+
+    async with client_for_actor(profile_database[0], INCOMPLETE_ACTOR_ID) as client:
+        created = await client.put(
+            "/api/v1/me/default-target-profile",
+            json={"target_role": "  后端工程师  ", "relevant_experience_months": 36},
+        )
+        assert created.status_code == 200
+        created_body = created.json()
+        assert created_body["target_role"] == "后端工程师"
+        assert created_body["relevant_experience_months"] == 36
+
+        overview = await client.get("/api/v1/me/overview")
+        assert overview.json()["default_target_profile"] == created_body
+
+        updated = await client.put(
+            "/api/v1/me/default-target-profile",
+            json={"target_role": "算法工程师", "relevant_experience_months": 24},
+        )
+        assert updated.status_code == 200
+        updated_body = updated.json()
+        assert updated_body["id"] == created_body["id"]
+        assert updated_body["target_role"] == "算法工程师"
+
+        repeated = await client.put(
+            "/api/v1/me/default-target-profile",
+            json={"target_role": " 算法工程师 ", "relevant_experience_months": 24},
+        )
+        assert repeated.json()["id"] == created_body["id"]
+
+    engine = profile_database[1]
+    with engine.connect() as connection:
+        defaults = connection.execute(
+            text(
+                """
+                select target_role, relevant_experience_months
+                from candidate_profiles
+                where user_id = :user_id and is_default is true
+                """
+            ),
+            {"user_id": INCOMPLETE_ACTOR_ID},
+        ).all()
+        account = connection.execute(
+            text("select nickname, avatar_object_key from users where id = :user_id"),
+            {"user_id": INCOMPLETE_ACTOR_ID},
+        ).one()
+    assert len(defaults) == 1
+    assert tuple(defaults[0]) == ("算法工程师", 24)
+    assert tuple(account) == ("Incomplete Actor", None)
+
+
+async def test_put_default_target_profile_rejects_invalid_fields_with_422(
+    profile_database: tuple[str, Engine],
+) -> None:
+    """Every invalid field yields a field-level problem details response."""
+
+    async with client_for_actor(profile_database[0], INCOMPLETE_ACTOR_ID) as client:
+        for payload, expected_field in (
+            ({"target_role": "   ", "relevant_experience_months": 12}, "target_role"),
+            ({"target_role": "x" * 201, "relevant_experience_months": 12}, "target_role"),
+            ({"target_role": "角色\x1b", "relevant_experience_months": 12}, "target_role"),
+            ({"target_role": "角色", "relevant_experience_months": -1}, None),
+            ({"target_role": "角色", "relevant_experience_months": 601}, None),
+            ({"relevant_experience_months": 12}, None),
+        ):
+            response = await client.put(
+                "/api/v1/me/default-target-profile",
+                json=payload,
+            )
+
+            assert response.status_code == 422, payload
+            assert response.headers["content-type"] == "application/problem+json"
+            problem = response.json()
+            assert problem["code"] in {"invalid_target_role", "validation_error"}
+            violations = problem.get("errors") or []
+            if expected_field is not None:
+                assert violations
+                assert violations[0]["field"] == expected_field
+
+
+async def test_put_default_target_profile_requires_authentication(
+    profile_database: tuple[str, Engine],
+) -> None:
+    """The write is refused before any handler logic for anonymous calls."""
+
+    async with client_without_actor(profile_database[0]) as client:
+        response = await client.put(
+            "/api/v1/me/default-target-profile",
+            json={"target_role": "算法工程师", "relevant_experience_months": 24},
+        )
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "authentication_required"
+    engine = profile_database[1]
+    with engine.connect() as connection:
+        count = connection.execute(
+            text("select count(*) from candidate_profiles where user_id = :user_id"),
+            {"user_id": REJECTED_ACTOR_ID},
+        ).scalar_one()
+    assert count == 0
+
+
+async def test_put_default_target_profile_never_accepts_forged_profile_ids(
+    profile_database: tuple[str, Engine],
+) -> None:
+    """A foreign profile ID in the body is rejected and never written."""
+
+    engine = profile_database[1]
+    async with client_for_actor(profile_database[0], REJECTED_ACTOR_ID) as client:
+        response = await client.put(
+            "/api/v1/me/default-target-profile",
+            json={
+                "profile_id": str(SECOND_PROFILE_ID),
+                "target_role": "伪造角色",
+                "relevant_experience_months": 12,
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+    with engine.connect() as connection:
+        forged = connection.execute(
+            text(
+                """
+                select target_role, relevant_experience_months
+                from candidate_profiles where id = :profile_id
+                """
+            ),
+            {"profile_id": SECOND_PROFILE_ID},
+        ).one()
+        own = connection.execute(
+            text(
+                """
+                select count(*) from candidate_profiles where user_id = :user_id
+                """
+            ),
+            {"user_id": REJECTED_ACTOR_ID},
+        ).scalar_one()
+    assert tuple(forged) == ("Platform Engineer", 48)
+    assert own == 0
+
+
 def client_for_actor(database_url: str, actor_id: UUID) -> AsyncClient:
     settings = make_settings(
         database_url,
@@ -247,7 +393,8 @@ def insert_profile_fixtures(engine: Engine) -> None:
                 values
                     (:second_id, 'Second Actor', null),
                     (:incomplete_id, 'Incomplete Actor', null),
-                    (:avatar_id, 'Avatar Actor', :avatar_key)
+                    (:avatar_id, 'Avatar Actor', :avatar_key),
+                    (:rejected_id, 'Rejected Actor', null)
                 """
             ),
             {
@@ -255,6 +402,7 @@ def insert_profile_fixtures(engine: Engine) -> None:
                 "incomplete_id": INCOMPLETE_ACTOR_ID,
                 "avatar_id": AVATAR_ACTOR_ID,
                 "avatar_key": f"avatars/{AVATAR_ACTOR_ID}/018f7f64-avatar.png",
+                "rejected_id": REJECTED_ACTOR_ID,
             },
         )
         connection.execute(

@@ -8,6 +8,7 @@ from fastapi.routing import APIRoute
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
+from probeinterview.candidate.profile.application.overview import ProfileOverview
 from probeinterview.entrypoints import api, database_initializer, worker
 from probeinterview.entrypoints.identity_wiring import ComposedExchangeSnapshotReader
 from probeinterview.identity.access.api.dependencies import current_actor
@@ -255,6 +256,46 @@ def test_authentication_failure_response_and_logs_never_contain_the_token() -> N
     assert all(presented_token not in line for line in captured)
 
 
+def test_signed_avatar_urls_are_served_but_never_logged() -> None:
+    """Signed display URLs appear in the overview body, never in the logs."""
+
+    import logging as logging_module
+
+    from probeinterview.platform.foundation.infrastructure.logging import (
+        JsonLogFormatter,
+    )
+
+    app = api.create_app(settings=WECHAT_APP_SETTINGS, readiness_checks={})
+    signed_url = "https://display.invalid/signed?Signature=avatar-url-secret"
+    app.state.profile_overview_query = _StubSignedOverviewQuery(signed_url)
+    app.state.actor_authenticator = BearerSessionAuthenticator(
+        sessions=_StubSessionResolver(uuid4()),
+        capabilities=_StubCapabilityReader(),
+    )
+    captured: list[str] = []
+
+    class CapturingHandler(logging_module.Handler):
+        def emit(self, record: logging_module.LogRecord) -> None:
+            captured.append(self.format(record))
+
+    probe_handler = CapturingHandler()
+    probe_handler.setFormatter(JsonLogFormatter())
+    logging_module.getLogger("probeinterview").addHandler(probe_handler)
+    try:
+        client = TestClient(app)
+        response = client.get(
+            "/api/v1/me/overview",
+            headers={"Authorization": "Bearer known-session-token"},
+        )
+    finally:
+        logging_module.getLogger("probeinterview").removeHandler(probe_handler)
+
+    assert response.status_code == 200
+    assert signed_url in response.text
+    assert captured, "the request must still be logged"
+    assert all(signed_url not in line for line in captured)
+
+
 def requires_authentication(route: APIRoute) -> bool:
     """Return whether the route's dependency tree resolves the current actor."""
 
@@ -336,6 +377,22 @@ class _RecordingOverviewQuery:
 
     def execute(self, actor: object) -> None:
         self._calls.append("overview")
+
+
+class _StubSignedOverviewQuery:
+    def __init__(self, signed_url: str) -> None:
+        self._signed_url = signed_url
+
+    def execute(self, actor: object) -> ProfileOverview:
+        return ProfileOverview(
+            id=uuid4(),
+            nickname="签名用户",
+            avatar_url=self._signed_url,
+            avatar_url_expires_at=_SNAPSHOT_EXPIRES_AT,
+            default_target_profile=None,
+            current_resume=None,
+            recent_scores=(),
+        )
 
 
 class _RecordingKnowledgeService:
