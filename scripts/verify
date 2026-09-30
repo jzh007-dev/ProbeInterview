@@ -65,6 +65,7 @@ if [[ "${full_mode}" == "true" ]]; then
   container_name="probeinterview-verify-pg-${$}"
   knowledge_database="probeinterview_knowledge_source_test_${$}"
   profile_database="probeinterview_profile_test_${$}"
+  identity_database="probeinterview_identity_test_${$}"
   step "integration: starting isolated PostgreSQL (${container_name})"
   docker run \
     --detach \
@@ -86,23 +87,32 @@ if [[ "${full_mode}" == "true" ]]; then
   docker exec "${container_name}" \
     psql --username probeinterview --dbname "${knowledge_database}" \
     --command "CREATE DATABASE ${profile_database}" >/dev/null
+  docker exec "${container_name}" \
+    psql --username probeinterview --dbname "${knowledge_database}" \
+    --command "CREATE DATABASE ${identity_database}" >/dev/null
   host_binding="$(docker port "${container_name}" 5432/tcp)"
   host_port="${host_binding##*:}"
-  knowledge_database_url="postgresql+psycopg://probeinterview:probe%2Finterview@127.0.0.1:${host_port}/${knowledge_database}"
-  profile_database_url="postgresql+psycopg://probeinterview:probe%2Finterview@127.0.0.1:${host_port}/${profile_database}"
+  database_url_template="postgresql+psycopg://probeinterview:probe%2Finterview@127.0.0.1:${host_port}"
   step "integration: pytest tests/integration/knowledge_source"
   (
     cd "${backend_dir}" && \
       PROBEINTERVIEW_DESTRUCTIVE_DATABASE_TEST=1 \
-      PROBEINTERVIEW_TEST_DATABASE_URL="${knowledge_database_url}" \
+      PROBEINTERVIEW_TEST_DATABASE_URL="${database_url_template}/${knowledge_database}" \
       uv run pytest tests/integration/knowledge_source -q
   )
   step "integration: pytest tests/integration/profile"
   (
     cd "${backend_dir}" && \
       PROBEINTERVIEW_DESTRUCTIVE_DATABASE_TEST=1 \
-      PROBEINTERVIEW_TEST_DATABASE_URL="${profile_database_url}" \
+      PROBEINTERVIEW_TEST_DATABASE_URL="${database_url_template}/${profile_database}" \
       uv run pytest tests/integration/profile -q
+  )
+  step "integration: pytest tests/integration/identity"
+  (
+    cd "${backend_dir}" && \
+      PROBEINTERVIEW_DESTRUCTIVE_DATABASE_TEST=1 \
+      PROBEINTERVIEW_TEST_DATABASE_URL="${database_url_template}/${identity_database}" \
+      uv run pytest tests/integration/identity -q
   )
 fi
 

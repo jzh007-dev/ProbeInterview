@@ -50,11 +50,11 @@ feature 合并前预期为红。
 - [x] 对象存储端口含幂等 delete 与 10 分钟签名 GET；knowledge-source 迁移到共享端口后行为不变
 
 **交换与会话**
-- [ ] 已知/未知身份、可空 UnionID、无效/已用 code、超时、服务不可用：fake 与 real adapter 行为一致且错误安全映射
-- [ ] `session_key`/AppSecret/原始供应商错误不出现在端口边界、响应或日志
-- [ ] 256-bit token 只在签发时返回明文；DB 只存摘要；到期精确；两设备独立 session
-- [ ] 已绑定 `(app_id, openid)` 交换 → 新 session + 最新 capability/display；未绑定 → 仅注册凭证，无临时用户/会话
-- [ ] bootstrap 路由免 token；响应与日志无 code/token/secret/session_key/openid
+- [x] 已知/未知身份、可空 UnionID、无效/已用 code、超时、服务不可用：fake 与 real adapter 行为一致且错误安全映射
+- [x] `session_key`/AppSecret/原始供应商错误不出现在端口边界、响应或日志
+- [x] 256-bit token 只在签发时返回明文；DB 只存摘要；到期精确；两设备独立 session
+- [x] 已绑定 `(app_id, openid)` 交换 → 新 session + 最新 capability/display；未绑定 → 仅注册凭证，无临时用户/会话
+- [x] bootstrap 路由免 token；响应与日志无 code/token/secret/session_key/openid
 
 **注册与头像**
 - [ ] 昵称 trim/长度/控制字符校验；一次性凭证校验；用户+绑定+session 原子创建

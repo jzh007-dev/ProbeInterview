@@ -1,7 +1,7 @@
 """Identity-owned SQLAlchemy mappings."""
 
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     CheckConstraint,
@@ -116,7 +116,7 @@ class WeChatRegistrationAttemptModel(Base):
         ),
     )
 
-    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     token_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     app_id: Mapped[str] = mapped_column(String(64), nullable=False)
     openid: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -154,7 +154,7 @@ class AuthSessionModel(Base):
         UniqueConstraint("token_digest", name="uq_auth_sessions_token_digest"),
     )
 
-    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("users.id", ondelete="RESTRICT"),

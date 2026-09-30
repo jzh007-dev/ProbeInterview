@@ -24,10 +24,19 @@ from probeinterview.candidate.profile.application.overview import (
 from probeinterview.candidate.profile.infrastructure.queries import (
     SqlAlchemyCandidateOverviewReader,
 )
+from probeinterview.entrypoints.identity_wiring import build_wechat_exchange_service
 from probeinterview.identity.access.api.dependencies import CurrentActorUnavailable
+from probeinterview.identity.access.api.router import router as wechat_auth_router
+from probeinterview.identity.access.application.wechat import (
+    WeChatCodeExchangeFailed,
+    WeChatServiceUnavailable,
+)
 from probeinterview.identity.access.infrastructure.local_actor import build_actor_provider
 from probeinterview.identity.access.infrastructure.queries import (
     SqlAlchemyIdentityDisplayReader,
+)
+from probeinterview.identity.access.infrastructure.wechat_adapters import (
+    build_wechat_exchange,
 )
 from probeinterview.knowledge.source.api.router import router as knowledge_source_router
 from probeinterview.knowledge.source.application.errors import KnowledgeSourceError
@@ -92,6 +101,12 @@ def create_app(
     )
     app.include_router(profile_router)
     app.include_router(knowledge_source_router)
+    app.include_router(wechat_auth_router)
+    app.state.wechat_exchange_service = build_wechat_exchange_service(
+        resolved_settings,
+        session_factory,
+        build_wechat_exchange(resolved_settings),
+    )
 
     @app.middleware("http")
     async def add_request_id(
@@ -206,6 +221,38 @@ def create_app(
                 detail="A current actor is required.",
                 instance=request.url.path,
                 code="actor_required",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(WeChatCodeExchangeFailed)
+    async def wechat_code_exchange_failed_problem(
+        request: Request,
+        _error: WeChatCodeExchangeFailed,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="WeChat Code Exchange Failed",
+                status=400,
+                detail="The WeChat login code is invalid, expired, or already used.",
+                instance=request.url.path,
+                code="wechat_code_exchange_failed",
+                request_id=request.state.request_id,
+            )
+        )
+
+    @app.exception_handler(WeChatServiceUnavailable)
+    async def wechat_service_unavailable_problem(
+        request: Request,
+        _error: WeChatServiceUnavailable,
+    ) -> JSONResponse:
+        return problem_response(
+            ProblemDetails(
+                title="WeChat Service Unavailable",
+                status=503,
+                detail="The WeChat identity service is temporarily unavailable.",
+                instance=request.url.path,
+                code="wechat_service_unavailable",
                 request_id=request.state.request_id,
             )
         )
