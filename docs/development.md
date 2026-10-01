@@ -222,6 +222,13 @@ PROBEINTERVIEW_BETA_BASE_URL=https://beta.example.invalid \
   scripts/test-beta-smoke
 ```
 
+If the WeChat developer tools fail to start the mini program with
+`module 'fixtures/home-knowledge.js' is not defined`, the tool's
+"filter unused files" option has dropped a runtime module: keep
+`ignoreDevUnusedFiles` / `ignoreUploadUnusedFiles` disabled (as checked in
+`project.config.json`), then clear the tool cache and recompile. The home tab
+intentionally ships the fixture content until real topic data lands.
+
 Runtime health endpoints are available through the gateway:
 
 - `/health/live` reports API process liveness without checking external

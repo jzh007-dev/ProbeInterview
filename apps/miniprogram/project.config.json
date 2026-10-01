@@ -21,6 +21,7 @@
     "minifyWXML": true,
     "localPlugins": false,
     "disableUseStrict": false,
+    "ignoreUploadUnusedFiles": false,
     "condition": false,
     "babelSetting": {
       "ignore": [],
