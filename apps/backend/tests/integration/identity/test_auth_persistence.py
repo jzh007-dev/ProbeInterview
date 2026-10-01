@@ -19,6 +19,7 @@ from probeinterview.identity.access.infrastructure.auth_stores import (
     SqlAlchemyAuthSessionStore,
     SqlAlchemyRegistrationAttemptStore,
 )
+from probeinterview.identity.access.infrastructure.models import AuthSessionModel
 from probeinterview.platform.foundation.infrastructure.persistence import (
     create_engine,
     create_session_factory,
@@ -26,7 +27,9 @@ from probeinterview.platform.foundation.infrastructure.persistence import (
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 
-NOW = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
+# Wall-clock anchored: both tables enforce `expires_at > created_at` where
+# created_at defaults to now(), so a pinned NOW fails after it ages into the past.
+NOW = datetime.now(UTC).replace(microsecond=0)
 
 
 def isolated_database_url() -> str:
@@ -132,11 +135,17 @@ def test_session_resolution_enforces_expiry_and_revocation(
         token_digest=token_digest(active_token),
         expires_at=NOW + SESSION_TTL,
     )
-    store.create(
-        user_id=user_id,
-        token_digest=token_digest(expired_token),
-        expires_at=NOW - timedelta(seconds=1),
-    )
+    # An already-expired session cannot come from store.create: the table
+    # requires expires_at > created_at, so backdate created_at explicitly.
+    with create_session_factory(identity_engine)() as session, session.begin():
+        session.add(
+            AuthSessionModel(
+                user_id=user_id,
+                token_digest=token_digest(expired_token),
+                created_at=NOW - SESSION_TTL,
+                expires_at=NOW - timedelta(seconds=1),
+            )
+        )
     store.create(
         user_id=user_id,
         token_digest=token_digest(revoked_token),
