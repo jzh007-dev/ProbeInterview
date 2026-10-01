@@ -1,11 +1,8 @@
 import {HOME_KNOWLEDGE_FIXTURE} from "../../fixtures/home-knowledge"
 import {
-  currentUserSnapshotFromOverview,
   readCurrentUserSnapshot,
-  writeCurrentUserSnapshot,
   type CurrentUserSnapshot,
 } from "../../services/current-user-store"
-import {fetchProfileOverview} from "../../services/profile-overview"
 import {
   currentHomeHeader,
   findHomeTopic,
@@ -20,7 +17,11 @@ export const HOME_ACTIONS = [
 ] as const
 
 export type HomeAction = (typeof HOME_ACTIONS)[number]
-type HomeViewStatus = "loading" | "success" | "error"
+
+const LOGIN_PAGE_PATH = "/pages/login/index"
+const PROFILE_TAB_URL = "/pages/profile/index"
+
+type HomeViewStatus = "loading" | "success"
 
 const initialLearningCard = HOME_KNOWLEDGE_FIXTURE.learningCards[0]
 const initialTopic =
@@ -47,7 +48,6 @@ interface HomeKnowledgeOverviewData {
   currentLearningProgress: string
   selectedTopicId: string
   selectedTopicSummary: string
-  errorMessage: string
   lastAction: HomeAction | ""
 }
 
@@ -65,7 +65,6 @@ const INITIAL_DATA: HomeKnowledgeOverviewData = {
   currentLearningProgress: formatLearningProgress(initialLearningCard),
   selectedTopicId: initialTopic.id,
   selectedTopicSummary: formatTopicSummary(initialTopic),
-  errorMessage: "",
   lastAction: "",
 }
 
@@ -75,13 +74,14 @@ Component({
   lifetimes: {
     attached() {
       this.refreshHeader()
-      void this.loadCurrentUser()
+      this.syncCurrentUser()
     },
   },
 
   pageLifetimes: {
     show() {
       this.refreshHeader()
+      this.syncCurrentUser()
     },
   },
 
@@ -90,42 +90,18 @@ Component({
       this.setData(currentHomeHeader())
     },
 
-    async loadCurrentUser() {
-      this.setData({
-        status: "loading",
-        currentUser: null,
-        errorMessage: "",
-      })
-
-      const cachedUser = readCurrentUserSnapshot()
-      if (cachedUser !== null) {
-        this.setData({
-          status: "success",
-          currentUser: cachedUser,
-        })
+    syncCurrentUser() {
+      const snapshot = readCurrentUserSnapshot()
+      if (snapshot === null) {
+        this.setData({status: "loading", currentUser: null})
+        wx.reLaunch({url: LOGIN_PAGE_PATH})
         return
       }
-
-      try {
-        const overview = await fetchProfileOverview()
-        const currentUser = writeCurrentUserSnapshot(
-          currentUserSnapshotFromOverview(overview),
-        )
-        this.setData({
-          status: "success",
-          currentUser,
-        })
-      } catch {
-        this.setData({
-          status: "error",
-          currentUser: null,
-          errorMessage: "首页身份信息加载失败，请稍后重试",
-        })
-      }
+      this.setData({status: "success", currentUser: snapshot})
     },
 
-    onRetry() {
-      void this.loadCurrentUser()
+    onGoToProfile() {
+      wx.switchTab({url: PROFILE_TAB_URL})
     },
 
     onSwiperChange(event: {detail: {current?: unknown}}) {

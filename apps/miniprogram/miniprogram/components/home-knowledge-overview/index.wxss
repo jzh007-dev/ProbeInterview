@@ -72,13 +72,43 @@
   font-size: 34rpx;
 }
 
+.profile-hint-card {
+  padding: 28rpx 30rpx;
+  margin-bottom: 22rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.58);
+  border-radius: 38rpx;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 244, 214, 0.8), transparent 40%),
+    rgba(255, 255, 255, 0.62);
+  box-shadow: 0 22rpx 46rpx rgba(56, 72, 63, 0.08);
+}
+
+.profile-hint-title {
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.profile-hint-copy {
+  margin-top: 8rpx;
+  color: #7c8881;
+  font-size: 22rpx;
+}
+
+.profile-hint-action {
+  width: fit-content;
+  padding: 14rpx 30rpx;
+  margin-top: 18rpx;
+  border-radius: 999rpx;
+  color: #f6f9f7;
+  background: linear-gradient(145deg, #46564d, #303d36);
+}
+
 .week-card {
   min-height: 162rpx;
   padding: 24rpx 25rpx;
   box-sizing: border-box;
   gap: 22rpx;
-  border: 1rpx solid rgba(255, 255, 255, 0.58);
-  border-radius: 48rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.58);  border-radius: 48rpx;
   background:
     radial-gradient(circle at 94% -10%, rgba(255, 255, 255, 0.82), transparent 32%),
     linear-gradient(142deg, rgba(216, 242, 235, 0.94), rgba(191, 225, 217, 0.8));

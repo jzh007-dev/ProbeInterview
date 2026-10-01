@@ -1,15 +1,8 @@
 <view class="home-overview">
   <view wx:if="{{status == 'loading'}}" class="state-card loading-state">
     <view class="state-orb"></view>
-    <view class="state-title">正在准备今日训练</view>
-    <view class="state-copy">正在读取当前用户信息</view>
-  </view>
-
-  <view wx:elif="{{status == 'error'}}" class="state-card error-state">
-    <view class="state-symbol">!</view>
-    <view class="state-title">{{errorMessage}}</view>
-    <view class="state-copy">请检查网络连接后重试</view>
-    <view id="retry-home" class="retry-action" bindtap="onRetry">重新加载</view>
+    <view class="state-title">正在进入登录</view>
+    <view class="state-copy">未找到有效的登录信息</view>
   </view>
 
   <block wx:elif="{{status == 'success' && currentUser}}">
@@ -24,6 +17,17 @@
         data-action="search-knowledge"
         bindtap="handleAction"
       >⌕</view>
+    </view>
+
+    <view
+      wx:if="{{!currentUser.defaultTargetProfile}}"
+      class="profile-hint-card"
+    >
+      <view class="profile-hint-title">先设置你的目标岗位</view>
+      <view class="profile-hint-copy">设置后，训练才能围绕目标岗位展开</view>
+      <view id="go-profile" class="profile-hint-action" bindtap="onGoToProfile">
+        去设置
+      </view>
     </view>
 
     <view class="week-card">
