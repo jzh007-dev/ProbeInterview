@@ -7,9 +7,10 @@ base_url="${PROBEINTERVIEW_BETA_BASE_URL:-http://127.0.0.1:8080}"
 base_url="${base_url%/}"
 openapi_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-beta-openapi.XXXXXX")"
 collection_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-beta-collection.XXXXXX")"
+session_file="$(mktemp "${TMPDIR:-/tmp}/probeinterview-beta-session.XXXXXX")"
 
 cleanup() {
-  rm -f "${openapi_file}" "${collection_file}"
+  rm -f "${openapi_file}" "${collection_file}" "${session_file}"
 }
 trap cleanup EXIT
 
@@ -33,8 +34,30 @@ paths = json.loads(pathlib.Path(sys.argv[1]).read_text())["paths"]
 assert "/api/v1/me/knowledge-sources" in paths
 PY
 
+# The smoke exchanges the deterministic fake-adapter login code of the seeded
+# demo identity for a bearer session. Environments running the real WeChat
+# adapter cannot serve this check.
+curl --fail --silent --show-error \
+  -H 'Content-Type: application/json' \
+  -d '{"code": "oProbeInterviewDemoOpenId01"}' \
+  "${base_url}/api/v1/auth/wechat/exchanges" \
+  >"${session_file}"
+bearer_token="$(
+  python3 - "${session_file}" <<'PY'
+import json
+import pathlib
+import sys
+
+data = json.loads(pathlib.Path(sys.argv[1]).read_text())
+assert data["status"] == "authenticated", data["status"]
+assert data["token_type"] == "Bearer"
+print(data["access_token"])
+PY
+)"
+
 curl --fail --silent --show-error \
   --output "${collection_file}" \
+  -H "Authorization: Bearer ${bearer_token}" \
   "${base_url}/api/v1/me/knowledge-sources"
 python3 - "${collection_file}" <<'PY'
 import json

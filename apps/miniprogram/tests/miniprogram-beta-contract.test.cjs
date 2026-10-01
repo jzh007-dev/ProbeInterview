@@ -81,12 +81,14 @@ test("upload history contains long filenames and keeps status and scope visible"
   )
 })
 
-test("running-development beta smoke is read-only for product data", () => {
+test("running-development beta smoke carries a session but stays read-only for product data", () => {
   const script = fs.readFileSync(
     path.join(repositoryRoot, "scripts", "test-beta-smoke"),
     "utf8",
   )
 
+  expect(script).toContain("/api/v1/auth/wechat/exchanges")
+  expect(script).toContain("Authorization: Bearer ${bearer_token}")
   expect(script).toContain("/api/v1/me/knowledge-sources")
   expect(script).not.toContain("Idempotency-Key")
   expect(script).not.toContain(' -F "')
