@@ -1,3 +1,9 @@
+import {
+  requestJson,
+  uploadMultipart,
+  TransportError,
+} from "./transport"
+
 export type KnowledgeSourceScope = "PRIVATE" | "PUBLIC"
 
 export interface KnowledgeSourceQuota {
@@ -26,45 +32,6 @@ export interface KnowledgeSourceUpload {
   quota: KnowledgeSourceQuota
 }
 
-export interface ProblemDetails {
-  status?: number
-  code?: string
-  quota?: KnowledgeSourceQuota
-}
-
-interface RequestResponse {
-  statusCode: number
-  data: unknown
-}
-
-interface RequestOptions {
-  url: string
-  method: "GET"
-  success: (response: RequestResponse) => void
-  fail: () => void
-}
-
-interface UploadResponse {
-  statusCode: number
-  data: string
-}
-
-interface UploadOptions {
-  url: string
-  filePath: string
-  name: "file"
-  formData: {
-    scope: KnowledgeSourceScope
-    original_filename: string
-  }
-  header: {"Idempotency-Key": string}
-  success: (response: UploadResponse) => void
-  fail: () => void
-}
-
-export type KnowledgeSourceRequest = (options: RequestOptions) => void
-export type KnowledgeSourceUploader = (options: UploadOptions) => void
-
 export type KnowledgeSourceErrorCode =
   | "daily_upload_limit_reached"
   | "effective_source_limit_reached"
@@ -74,6 +41,7 @@ export type KnowledgeSourceErrorCode =
   | "network_error"
   | "object_storage_unavailable"
   | "public_knowledge_source_forbidden"
+  | "unauthorized"
   | "unknown_error"
 
 const ERROR_MESSAGES: Record<KnowledgeSourceErrorCode, string> = {
@@ -85,6 +53,7 @@ const ERROR_MESSAGES: Record<KnowledgeSourceErrorCode, string> = {
   network_error: "网络连接失败，请稍后重试",
   object_storage_unavailable: "资料存储暂时不可用，请稍后重试",
   public_knowledge_source_forbidden: "当前账号不能提交 public 资料",
+  unauthorized: "登录状态已失效，请重新登录",
   unknown_error: "请求失败，请稍后重试",
 }
 
@@ -104,107 +73,173 @@ export class KnowledgeSourceApiError extends Error {
 }
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8080"
+const COLLECTION_ENDPOINT = "/api/v1/me/knowledge-sources"
 
-export function fetchKnowledgeSources(
-  request: KnowledgeSourceRequest = requestWithWechat,
-  apiBaseUrl = DEFAULT_API_BASE_URL,
-): Promise<KnowledgeSourceCollection> {
-  return new Promise((resolve, reject) => {
-    request({
-      url: `${apiBaseUrl}/api/v1/me/knowledge-sources`,
-      method: "GET",
-      success(response) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(response.data as KnowledgeSourceCollection)
-          return
-        }
-        reject(problemError(response.data))
-      },
-      fail() {
-        reject(new KnowledgeSourceApiError("network_error"))
-      },
-    })
-  })
+function toApiError(error: unknown): KnowledgeSourceApiError {
+  if (error instanceof TransportError) {
+    if (error.code === "network_error") {
+      return new KnowledgeSourceApiError("network_error")
+    }
+    if (error.code === "unauthorized") {
+      return new KnowledgeSourceApiError("unauthorized")
+    }
+    if (
+      error.problemCode !== null &&
+      KNOWN_PROBLEM_CODES.has(error.problemCode)
+    ) {
+      return new KnowledgeSourceApiError(
+        error.problemCode as KnowledgeSourceErrorCode,
+      )
+    }
+  }
+  return new KnowledgeSourceApiError("unknown_error")
 }
 
-export function uploadKnowledgeSource(
+const KNOWN_PROBLEM_CODES = new Set([
+  "daily_upload_limit_reached",
+  "effective_source_limit_reached",
+  "idempotency_conflict",
+  "invalid_knowledge_source",
+  "knowledge_source_too_large",
+  "object_storage_unavailable",
+  "public_knowledge_source_forbidden",
+])
+
+export async function fetchKnowledgeSources(
+  apiBaseUrl = DEFAULT_API_BASE_URL,
+): Promise<KnowledgeSourceCollection> {
+  let payload: unknown
+  try {
+    payload = await requestJson(
+      {url: `${apiBaseUrl}${COLLECTION_ENDPOINT}`, method: "GET"},
+      {authenticated: true},
+    )
+  } catch (error) {
+    throw toApiError(error)
+  }
+  const parsed = parseCollection(payload)
+  if (parsed === null) {
+    throw new KnowledgeSourceApiError("unknown_error")
+  }
+  return parsed
+}
+
+export async function uploadKnowledgeSource(
   input: {
     filePath: string
     originalFilename: string
     scope: KnowledgeSourceScope
     idempotencyKey: string
   },
-  upload: KnowledgeSourceUploader = uploadWithWechat,
   apiBaseUrl = DEFAULT_API_BASE_URL,
 ): Promise<KnowledgeSourceUpload> {
-  return new Promise((resolve, reject) => {
-    upload({
-      url: `${apiBaseUrl}/api/v1/me/knowledge-sources`,
-      filePath: input.filePath,
-      name: "file",
-      formData: {
-        scope: input.scope,
-        original_filename: input.originalFilename,
+  let payload: unknown
+  try {
+    payload = await uploadMultipart(
+      {
+        url: `${apiBaseUrl}${COLLECTION_ENDPOINT}`,
+        filePath: input.filePath,
+        name: "file",
+        formData: {
+          scope: input.scope,
+          original_filename: input.originalFilename,
+        },
+        header: {"Idempotency-Key": input.idempotencyKey},
       },
-      header: {"Idempotency-Key": input.idempotencyKey},
-      success(response) {
-        let data: unknown
-        try {
-          data = JSON.parse(response.data)
-        } catch {
-          reject(new KnowledgeSourceApiError("unknown_error"))
-          return
-        }
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(data as KnowledgeSourceUpload)
-          return
-        }
-        reject(problemError(data))
-      },
-      fail() {
-        reject(new KnowledgeSourceApiError("network_error"))
-      },
-    })
-  })
+      {authenticated: true},
+    )
+  } catch (error) {
+    throw toApiError(error)
+  }
+  const parsed = parseUpload(payload)
+  if (parsed === null) {
+    throw new KnowledgeSourceApiError("unknown_error")
+  }
+  return parsed
 }
 
-function problemError(value: unknown): KnowledgeSourceApiError {
-  const problem =
-    typeof value === "object" && value !== null ? (value as ProblemDetails) : {}
-  const knownCodes = Object.keys(ERROR_MESSAGES) as KnowledgeSourceErrorCode[]
-  const code = knownCodes.includes(problem.code as KnowledgeSourceErrorCode)
-    ? (problem.code as KnowledgeSourceErrorCode)
-    : problem.code === "public_knowledge_source_forbidden"
-      ? "public_knowledge_source_forbidden"
-      : "unknown_error"
-  return new KnowledgeSourceApiError(code, problem.quota ?? null)
+function parseCollection(value: unknown): KnowledgeSourceCollection | null {
+  if (typeof value !== "object" || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const quota = parseQuota(record.quota)
+  if (quota === null || !Array.isArray(record.items)) {
+    return null
+  }
+  const items: KnowledgeSourceItem[] = []
+  for (const entry of record.items) {
+    const item = parseItem(entry)
+    if (item === null) {
+      return null
+    }
+    items.push(item)
+  }
+  return {quota, items}
 }
 
-const requestWithWechat: KnowledgeSourceRequest = (options) => {
-  wx.request({
-    url: options.url,
-    method: options.method,
-    success(response) {
-      options.success({statusCode: response.statusCode, data: response.data})
-    },
-    fail() {
-      options.fail()
-    },
-  })
+function parseUpload(value: unknown): KnowledgeSourceUpload | null {
+  if (typeof value !== "object" || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  const quota = parseQuota(record.quota)
+  const item = parseItem(record.source)
+  if (quota === null || item === null) {
+    return null
+  }
+  return {source: item, quota}
 }
 
-const uploadWithWechat: KnowledgeSourceUploader = (options) => {
-  wx.uploadFile({
-    url: options.url,
-    filePath: options.filePath,
-    name: options.name,
-    formData: options.formData,
-    header: options.header,
-    success(response) {
-      options.success({statusCode: response.statusCode, data: response.data})
-    },
-    fail() {
-      options.fail()
-    },
-  })
+function parseQuota(value: unknown): KnowledgeSourceQuota | null {
+  if (typeof value !== "object" || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  if (
+    record.timezone !== "Asia/Shanghai" ||
+    !isFiniteNumber(record.daily_limit) ||
+    !isFiniteNumber(record.daily_used) ||
+    !isFiniteNumber(record.effective_source_limit) ||
+    !isFiniteNumber(record.effective_source_count)
+  ) {
+    return null
+  }
+  return {
+    timezone: "Asia/Shanghai",
+    daily_limit: record.daily_limit,
+    daily_used: record.daily_used,
+    effective_source_limit: record.effective_source_limit,
+    effective_source_count: record.effective_source_count,
+  }
+}
+
+function parseItem(value: unknown): KnowledgeSourceItem | null {
+  if (typeof value !== "object" || value === null) {
+    return null
+  }
+  const record = value as Record<string, unknown>
+  if (
+    typeof record.id !== "string" ||
+    record.id === "" ||
+    typeof record.original_filename !== "string" ||
+    record.original_filename === "" ||
+    (record.scope !== "PRIVATE" && record.scope !== "PUBLIC") ||
+    record.processing_status !== "PENDING_EXTRACTION" ||
+    typeof record.uploaded_at !== "string" ||
+    record.uploaded_at === ""
+  ) {
+    return null
+  }
+  return {
+    id: record.id,
+    original_filename: record.original_filename,
+    scope: record.scope,
+    processing_status: "PENDING_EXTRACTION",
+    uploaded_at: record.uploaded_at,
+  }
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value)
 }

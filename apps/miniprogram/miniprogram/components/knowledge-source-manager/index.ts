@@ -70,15 +70,37 @@ Component({
         const collection = await fetchKnowledgeSources()
         this.applyCollection(collection)
       } catch (error) {
+        const apiError =
+          error instanceof KnowledgeSourceApiError ? error : null
+        if (apiError?.code === "unauthorized") {
+          this.clearOwnerRecords()
+          return
+        }
         const message =
-          error instanceof KnowledgeSourceApiError
-            ? error.message
+          apiError && apiError.code !== "unknown_error"
+            ? apiError.message
             : "上传记录加载失败，请稍后重试"
         this.setData({
           status: preserveItems ? "ready" : "error",
           errorMessage: message,
         })
       }
+    },
+
+    clearOwnerRecords() {
+      // The session is invalidated elsewhere; the previous owner's upload
+      // records and quota must not survive into the next login.
+      this.setData({
+        status: "loading",
+        items: [],
+        quota: null,
+        selectedFile: null,
+        selectedScope: "private",
+        idempotencyKey: "",
+        uploading: false,
+        quotaDisabled: false,
+        errorMessage: "",
+      })
     },
 
     applyCollection(collection: KnowledgeSourceCollection) {
@@ -165,6 +187,10 @@ Component({
       } catch (error) {
         const apiError =
           error instanceof KnowledgeSourceApiError ? error : null
+        if (apiError?.code === "unauthorized") {
+          this.clearOwnerRecords()
+          return
+        }
         const quota = apiError?.quota ?? this.data.quota
         this.setData({
           errorMessage: apiError?.message ?? "上传失败，请稍后重试",

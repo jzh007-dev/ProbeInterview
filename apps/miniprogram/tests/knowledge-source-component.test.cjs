@@ -1,11 +1,35 @@
 const path = require("node:path")
 const simulate = require("miniprogram-simulate")
+const {
+  AUTH_SESSION_CACHE_KEY,
+  AUTH_SESSION_CACHE_SCHEMA_VERSION,
+  resetAuthSessionMemoryForTests,
+} = require("../miniprogram/services/auth-store.ts")
+const {
+  CURRENT_USER_CACHE_KEY,
+  resetCurrentUserMemoryForTests,
+} = require("../miniprogram/services/current-user-store.ts")
+const {resetTransportInvalidationForTests} = require("../miniprogram/services/transport.ts")
 
 const componentPath = path.resolve(
   __dirname,
   "../miniprogram/components/knowledge-source-manager/index",
 )
 let componentId
+
+const SESSION = {
+  schemaVersion: AUTH_SESSION_CACHE_SCHEMA_VERSION,
+  accessToken: "token-upload",
+  expiresAt: "2099-01-01T00:00:00Z",
+}
+const SNAPSHOT = {
+  schemaVersion: 2,
+  userId: "user-upload",
+  nickname: "Owner",
+  avatarUrl: null,
+  avatarUrlExpiresAt: null,
+  defaultTargetProfile: null,
+}
 
 const EMPTY_COLLECTION = {
   quota: {
@@ -46,11 +70,21 @@ beforeEach(() => {
   document.body.innerHTML = ""
   jest.spyOn(Date, "now").mockReturnValue(1790748000000)
   jest.spyOn(Math, "random").mockReturnValue(0.123456789)
+  const storage = new Map()
   global.wx = {
     chooseMessageFile: jest.fn(),
+    getStorageSync: (key) => storage.get(key),
+    reLaunch: jest.fn(),
+    removeStorageSync: (key) => storage.delete(key),
     request: jest.fn(),
+    setStorageSync: (key, value) => storage.set(key, value),
     uploadFile: jest.fn(),
   }
+  resetAuthSessionMemoryForTests()
+  resetCurrentUserMemoryForTests()
+  resetTransportInvalidationForTests()
+  storage.set(AUTH_SESSION_CACHE_KEY, SESSION)
+  storage.set(CURRENT_USER_CACHE_KEY, SNAPSHOT)
 })
 
 afterEach(() => {
@@ -66,6 +100,7 @@ test("renders loading then an honest empty state with real quota", async () => {
 
   expect(component.dom.textContent).toContain("正在加载知识资料")
   expect(component.dom.textContent).not.toContain("已完成")
+  await simulate.sleep(0)
   finishList()
   await simulate.sleep(0)
 
@@ -141,6 +176,7 @@ test("locks duplicate submit, renders pending records, and refreshes after succe
   component.instance.selectScope({currentTarget: {dataset: {scope: "public"}}})
 
   void component.instance.submitUpload()
+  await simulate.sleep(0)
   void component.instance.submitUpload()
   expect(component.data.uploading).toBe(true)
   expect(wx.uploadFile).toHaveBeenCalledTimes(1)
@@ -219,6 +255,32 @@ test("recovers collection loading errors without fabricating records", async () 
   component.querySelector("#retry-collection").dispatchEvent("tap")
   await simulate.sleep(0)
   expect(component.dom.textContent).toContain("还没有知识资料")
+})
+
+test("clears owner records when the session is invalidated mid-use", async () => {
+  const collection = {
+    quota: {...EMPTY_COLLECTION.quota, daily_used: 1, effective_source_count: 1},
+    items: [PRIVATE_SOURCE],
+  }
+  wx.request
+    .mockImplementationOnce((options) =>
+      options.success({statusCode: 200, data: collection}),
+    )
+    .mockImplementationOnce((options) => {
+      options.success({statusCode: 401, data: {code: "authentication_required"}})
+    })
+  const component = renderComponent()
+  await simulate.sleep(0)
+  expect(component.dom.textContent).toContain("private.md")
+
+  component.instance.retryCollection()
+  await simulate.sleep(0)
+
+  expect(component.data.items).toEqual([])
+  expect(component.data.quota).toBeNull()
+  expect(component.data.status).toBe("loading")
+  expect(component.dom.textContent).not.toContain("private.md")
+  expect(wx.reLaunch).toHaveBeenCalledWith({url: "/pages/login/index"})
 })
 
 function renderComponent() {
