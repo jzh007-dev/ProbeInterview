@@ -114,7 +114,7 @@ test("renders cached read-only identity and refreshes from the overview", async 
   expect(component.dom.textContent).toContain("LQ")
 })
 
-test("creates a target profile and updates the cache atomically on success", async () => {
+test("creates a target profile through pickers and collapses the form on success", async () => {
   writeCache(cachedSnapshot())
   wx.request
     .mockImplementationOnce((options) => {
@@ -129,7 +129,7 @@ test("creates a target profile and updates the cache atomically on success", asy
         statusCode: 200,
         data: {
           id: "profile-9",
-          target_role: "算法工程师",
+          target_role: "AI 全栈开发",
           relevant_experience_months: 36,
         },
       })
@@ -137,22 +137,36 @@ test("creates a target profile and updates the cache atomically on success", asy
   const component = renderComponent()
   await simulate.sleep(0)
 
-  setFormValues(component, "算法工程师", "36")
+  // The form stays collapsed until the user opens it.
+  expect(component.querySelector("#save-target-profile")).toBeUndefined()
+  component.querySelector("#edit-target-profile").dispatchEvent("tap")
+  await simulate.sleep(0)
+  expect(component.querySelector("#save-target-profile")).toBeDefined()
+
+  component.querySelector("#target-role-picker").dispatchEvent("change", {
+    detail: {value: 0},
+  })
+  component.querySelector("#target-years-picker").dispatchEvent("change", {
+    detail: {value: 2},
+  })
   component.querySelector("#save-target-profile").dispatchEvent("tap")
   await simulate.sleep(0)
 
   expect(component.dom.textContent).toContain("目标画像已保存")
   expect(component.dom.textContent).toContain("3 年")
+  // Bug 2: the submit button disappears once the profile is saved.
+  expect(component.querySelector("#save-target-profile")).toBeUndefined()
+  expect(component.dom.textContent).toContain("修改目标画像")
   expect(storage.get(CURRENT_USER_CACHE_KEY)).toMatchObject({
     defaultTargetProfile: {
-      targetRole: "算法工程师",
+      targetRole: "AI 全栈开发",
       relevantExperienceMonths: 36,
     },
   })
   expect(wx.request).toHaveBeenCalledTimes(2)
 })
 
-test("keeps inputs and the old cache when the save fails", async () => {
+test("keeps the open form and the old cache when the save fails", async () => {
   writeCache(cachedSnapshot())
   wx.request
     .mockImplementationOnce((options) => {
@@ -167,14 +181,19 @@ test("keeps inputs and the old cache when the save fails", async () => {
   const component = renderComponent()
   await simulate.sleep(0)
 
-  setFormValues(component, "算法工程师", "36")
+  component.querySelector("#edit-target-profile").dispatchEvent("tap")
+  await simulate.sleep(0)
+  component.querySelector("#target-years-picker").dispatchEvent("change", {
+    detail: {value: 4},
+  })
   component.querySelector("#save-target-profile").dispatchEvent("tap")
   await simulate.sleep(0)
 
   expect(component.dom.textContent).toContain("目标岗位需为 1 到 200 个字符")
   expect(component.dom.textContent).not.toContain("目标画像已保存")
-  expect(component.instance.data.profileRoleInput).toBe("算法工程师")
-  expect(component.instance.data.profileMonthsInput).toBe("36")
+  // The form stays open with the selections intact for a retry.
+  expect(component.querySelector("#save-target-profile")).toBeDefined()
+  expect(component.instance.data.profileYearsIndex).toBe(4)
   // The refresh from the overview brought the previous server-truth profile;
   // a failed save must leave exactly that cache untouched.
   expect(storage.get(CURRENT_USER_CACHE_KEY)).toMatchObject({
@@ -185,24 +204,29 @@ test("keeps inputs and the old cache when the save fails", async () => {
   })
 })
 
-test("rejects out-of-range inputs locally without a request", async () => {
-  writeCache(cachedSnapshot())
+test("seeds the years picker from the saved profile in years", async () => {
+  writeCache(
+    cachedSnapshot({
+      defaultTargetProfile: {
+        targetRole: "AI 全栈开发",
+        relevantExperienceMonths: 36,
+      },
+    }),
+  )
   wx.request.mockImplementation((options) => {
-    options.success({statusCode: 200, data: OVERVIEW_WITHOUT_RESUME})
+    options.success({statusCode: 200, data: OVERVIEW})
   })
   const component = renderComponent()
   await simulate.sleep(0)
 
-  setFormValues(component, "   ", "36")
-  component.querySelector("#save-target-profile").dispatchEvent("tap")
+  // Server truth wins over the stale cache summary after the refresh.
+  expect(component.dom.textContent).toContain("目标岗位")
+  expect(component.dom.textContent).toContain("2 年 3 个月")
+  component.querySelector("#edit-target-profile").dispatchEvent("tap")
   await simulate.sleep(0)
-  expect(component.dom.textContent).toContain("目标岗位需为 1 到 200 个字符")
-
-  setFormValues(component, "算法工程师", "601")
-  component.querySelector("#save-target-profile").dispatchEvent("tap")
-  await simulate.sleep(0)
-  expect(component.dom.textContent).toContain("经验月数需为 0 到 600 的整数")
-  expect(wx.request).toHaveBeenCalledTimes(1)
+  // 27 months has no exact year match; the picker falls back to 1 年.
+  expect(component.instance.data.profileYearsIndex).toBe(0)
+  expect(component.instance.data.targetRoleOptions).toContain("AI 全栈开发")
 })
 
 test("invalidation clears both caches and re-enters the login page", async () => {
@@ -277,13 +301,4 @@ function renderComponent() {
 
 function writeCache(snapshot) {
   storage.set(CURRENT_USER_CACHE_KEY, snapshot)
-}
-
-function setFormValues(component, role, months) {
-  component.querySelector("#target-role-input").dispatchEvent("input", {
-    detail: {value: role},
-  })
-  component.querySelector("#target-months-input").dispatchEvent("input", {
-    detail: {value: months},
-  })
 }

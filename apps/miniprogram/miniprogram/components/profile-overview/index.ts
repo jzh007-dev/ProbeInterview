@@ -10,12 +10,7 @@ import {
   putDefaultTargetProfile,
   type ProfileOverview,
 } from "../../services/profile-overview"
-import {
-  avatarInitials,
-  formatExperience,
-  parseExperienceMonthsInput,
-  validateTargetRoleInput,
-} from "../../utils/profile-overview"
+import {avatarInitials, formatExperience} from "../../utils/profile-overview"
 
 export const PROFILE_ACTIONS = [
   "open-settings",
@@ -29,6 +24,11 @@ export const PROFILE_ACTIONS = [
 export type ProfileAction = (typeof PROFILE_ACTIONS)[number]
 type ViewStatus = "loading" | "success" | "error"
 
+// The role catalogue is fixed until the role-normalization feature lands;
+// the picker keeps the write contract to known display-safe values.
+export const TARGET_ROLE_OPTIONS = ["AI 全栈开发"] as const
+export const TARGET_EXPERIENCE_YEARS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
+
 interface ProfileOverviewData {
   status: ViewStatus
   viewer: CurrentUserSnapshot | null
@@ -38,9 +38,11 @@ interface ProfileOverviewData {
   initials: string
   avatarFailed: boolean
   errorMessage: string
-  profileRoleInput: string
-  profileMonthsInput: string
-  profileFormTouched: boolean
+  targetRoleOptions: string[]
+  targetYearsOptions: string[]
+  profileFormOpen: boolean
+  profileRoleIndex: number
+  profileYearsIndex: number
   profileSaving: boolean
   profileError: string
   profileNotice: string
@@ -56,9 +58,11 @@ const INITIAL_DATA: ProfileOverviewData = {
   initials: "",
   avatarFailed: false,
   errorMessage: "",
-  profileRoleInput: "",
-  profileMonthsInput: "",
-  profileFormTouched: false,
+  targetRoleOptions: [...TARGET_ROLE_OPTIONS],
+  targetYearsOptions: TARGET_EXPERIENCE_YEARS.map((years) => `${years} 年`),
+  profileFormOpen: false,
+  profileRoleIndex: 0,
+  profileYearsIndex: 0,
   profileSaving: false,
   profileError: "",
   profileNotice: "",
@@ -93,6 +97,7 @@ Component({
 
     applyViewer(snapshot: CurrentUserSnapshot) {
       const profile = snapshot.defaultTargetProfile
+      const formOpen = this.data.profileFormOpen
       this.setData({
         status: "success",
         viewer: snapshot,
@@ -102,11 +107,18 @@ Component({
         targetRoleLabel:
           profile === null ? "尚未设置目标岗位" : profile.targetRole,
       })
-      if (!this.data.profileFormTouched) {
+      if (!formOpen) {
         this.setData({
-          profileRoleInput: profile === null ? "" : profile.targetRole,
-          profileMonthsInput:
-            profile === null ? "" : String(profile.relevantExperienceMonths),
+          profileRoleIndex: 0,
+          profileYearsIndex:
+            profile === null
+              ? 0
+              : Math.max(
+                  0,
+                  TARGET_EXPERIENCE_YEARS.findIndex(
+                    (years) => years * 12 === profile.relevantExperienceMonths,
+                  ),
+                ),
         })
       }
     },
@@ -142,38 +154,50 @@ Component({
       this.setData({ avatarFailed: true })
     },
 
-    onProfileRoleInput(event: {detail: {value?: unknown}}) {
-      const value = event.detail.value
-      if (typeof value !== "string") {
-        return
-      }
-      this.setData({profileRoleInput: value, profileFormTouched: true})
+    onEditProfile() {
+      const profile = this.data.viewer?.defaultTargetProfile ?? null
+      this.setData({
+        profileFormOpen: true,
+        profileError: "",
+        profileNotice: "",
+        profileRoleIndex: 0,
+        profileYearsIndex:
+          profile === null
+            ? 0
+            : Math.max(
+                0,
+                TARGET_EXPERIENCE_YEARS.findIndex(
+                  (years) => years * 12 === profile.relevantExperienceMonths,
+                ),
+              ),
+      })
     },
 
-    onProfileMonthsInput(event: {detail: {value?: unknown}}) {
-      const value = event.detail.value
-      if (typeof value !== "string") {
+    onProfileRoleChange(event: {detail: {value?: unknown}}) {
+      const index = event.detail.value
+      if (typeof index !== "number" || !Number.isInteger(index)) {
         return
       }
-      this.setData({profileMonthsInput: value, profileFormTouched: true})
+      this.setData({profileRoleIndex: index})
+    },
+
+    onProfileYearsChange(event: {detail: {value?: unknown}}) {
+      const index = event.detail.value
+      if (typeof index !== "number" || !Number.isInteger(index)) {
+        return
+      }
+      this.setData({profileYearsIndex: index})
     },
 
     async onSaveProfile() {
       if (this.data.profileSaving || this.data.viewer === null) {
         return
       }
-      const targetRole = validateTargetRoleInput(this.data.profileRoleInput)
-      if (targetRole === null) {
+      const role = TARGET_ROLE_OPTIONS[this.data.profileRoleIndex]
+      const years = TARGET_EXPERIENCE_YEARS[this.data.profileYearsIndex]
+      if (role === undefined || years === undefined) {
         this.setData({
-          profileError: "目标岗位需为 1 到 200 个字符",
-          profileNotice: "",
-        })
-        return
-      }
-      const months = parseExperienceMonthsInput(this.data.profileMonthsInput)
-      if (months === null) {
-        this.setData({
-          profileError: "经验月数需为 0 到 600 的整数",
+          profileError: "请选择目标岗位与经验年限",
           profileNotice: "",
         })
         return
@@ -182,8 +206,8 @@ Component({
       this.setData({profileSaving: true, profileError: "", profileNotice: ""})
       try {
         const saved = await putDefaultTargetProfile({
-          targetRole,
-          relevantExperienceMonths: months,
+          targetRole: role,
+          relevantExperienceMonths: years * 12,
         })
         // One validated cache write carries both the saved profile and the
         // rest of the display snapshot, so home observes it atomically.
@@ -202,6 +226,7 @@ Component({
               : {...this.data.overview, default_target_profile: saved},
           experienceLabel: formatExperience(saved.relevant_experience_months),
           targetRoleLabel: saved.target_role,
+          profileFormOpen: false,
           profileNotice: "目标画像已保存",
         })
       } catch (error) {

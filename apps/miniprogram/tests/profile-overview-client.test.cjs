@@ -10,14 +10,10 @@ const {
 } = require("../miniprogram/services/profile-overview.ts")
 const {TransportError} = require("../miniprogram/services/transport.ts")
 const {
-  parseExperienceMonthsInput,
-  parseProfileOverview,
-  parseTargetProfileResource,
-  validateTargetRoleInput,
-} = require("../miniprogram/utils/profile-overview.ts")
-const {
   avatarInitials,
   formatExperience,
+  parseProfileOverview,
+  parseTargetProfileResource,
 } = require("../miniprogram/utils/profile-overview.ts")
 
 const SESSION = {
@@ -161,21 +157,6 @@ test("maps profile failures to safe messages", () => {
     "网络连接失败，请稍后重试",
   )
   expect(describeProfileError(new Error("raw"))).toBe("请求失败，请稍后重试")
-})
-
-test("validates target role and experience months inputs", () => {
-  expect(validateTargetRoleInput("  AI 全栈开发 ")).toBe("AI 全栈开发")
-  expect(validateTargetRoleInput("   ")).toBeNull()
-  expect(validateTargetRoleInput("x".repeat(201))).toBeNull()
-  expect(validateTargetRoleInput("角色\x1b")).toBeNull()
-
-  expect(parseExperienceMonthsInput(" 36 ")).toBe(36)
-  expect(parseExperienceMonthsInput("0")).toBe(0)
-  expect(parseExperienceMonthsInput("600")).toBe(600)
-  expect(parseExperienceMonthsInput("601")).toBeNull()
-  expect(parseExperienceMonthsInput("-1")).toBeNull()
-  expect(parseExperienceMonthsInput("3.5")).toBeNull()
-  expect(parseExperienceMonthsInput("abc")).toBeNull()
 })
 
 test("formats experience and derives avatar initials from response values", () => {

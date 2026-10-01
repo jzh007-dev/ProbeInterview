@@ -44,40 +44,65 @@
 
     <view class="target-card soft-card">
       <view class="section-title">目标画像</view>
-      <view wx:if="{{!viewer.defaultTargetProfile}}" class="empty-copy">
+      <view wx:if="{{!viewer.defaultTargetProfile && !profileFormOpen}}" class="empty-copy">
         尚未设置目标岗位，设置后训练将围绕目标展开
       </view>
 
-      <input
-        id="target-role-input"
-        class="target-input"
-        type="text"
-        placeholder="目标岗位，如：AI 全栈开发"
-        placeholder-class="target-placeholder"
-        value="{{profileRoleInput}}"
-        disabled="{{profileSaving}}"
-        bindinput="onProfileRoleInput"
-      />
-      <input
-        id="target-months-input"
-        class="target-input"
-        type="number"
-        placeholder="相关经验月数（0-600）"
-        placeholder-class="target-placeholder"
-        value="{{profileMonthsInput}}"
-        disabled="{{profileSaving}}"
-        bindinput="onProfileMonthsInput"
-      />
+      <block wx:if="{{!profileFormOpen}}">
+        <view wx:if="{{viewer.defaultTargetProfile}}" class="target-summary">
+          <view class="target-summary-row">
+            <text class="target-summary-label">目标岗位</text>
+            <text class="target-summary-value">{{targetRoleLabel}}</text>
+          </view>
+          <view class="target-summary-row">
+            <text class="target-summary-label">相关经验</text>
+            <text class="target-summary-value">{{experienceLabel}}</text>
+          </view>
+        </view>
+        <view wx:if="{{profileNotice}}" class="inline-notice">{{profileNotice}}</view>
+        <view id="edit-target-profile" class="target-edit" bindtap="onEditProfile">
+          {{viewer.defaultTargetProfile ? '修改目标画像' : '设置目标画像'}}
+        </view>
+      </block>
 
-      <view wx:if="{{profileError}}" class="inline-error">{{profileError}}</view>
-      <view wx:if="{{profileNotice}}" class="inline-notice">{{profileNotice}}</view>
-      <button
-        id="save-target-profile"
-        class="target-save"
-        loading="{{profileSaving}}"
-        disabled="{{profileSaving}}"
-        bindtap="onSaveProfile"
-      >{{profileSaving ? '正在保存' : '保存目标画像'}}</button>
+      <block wx:else>
+        <view class="target-field">
+          <view class="target-field-label">目标岗位</view>
+          <picker
+            id="target-role-picker"
+            mode="selector"
+            range="{{targetRoleOptions}}"
+            value="{{profileRoleIndex}}"
+            disabled="{{profileSaving}}"
+            bindchange="onProfileRoleChange"
+          >
+            <view class="target-picker-value">{{targetRoleOptions[profileRoleIndex]}}</view>
+          </picker>
+        </view>
+
+        <view class="target-field">
+          <view class="target-field-label">相关经验</view>
+          <picker
+            id="target-years-picker"
+            mode="selector"
+            range="{{targetYearsOptions}}"
+            value="{{profileYearsIndex}}"
+            disabled="{{profileSaving}}"
+            bindchange="onProfileYearsChange"
+          >
+            <view class="target-picker-value">{{targetYearsOptions[profileYearsIndex]}}</view>
+          </picker>
+        </view>
+
+        <view wx:if="{{profileError}}" class="inline-error">{{profileError}}</view>
+        <button
+          id="save-target-profile"
+          class="target-save"
+          loading="{{profileSaving}}"
+          disabled="{{profileSaving}}"
+          bindtap="onSaveProfile"
+        >{{profileSaving ? '正在保存' : '保存目标画像'}}</button>
+      </block>
     </view>
 
     <view class="resume-card mint-card">

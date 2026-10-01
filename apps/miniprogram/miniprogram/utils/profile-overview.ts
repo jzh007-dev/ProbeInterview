@@ -1,8 +1,5 @@
 import type {ProfileOverview, TargetProfileOverview} from "../services/profile-overview"
 
-export const TARGET_ROLE_MAX_LENGTH = 200
-export const EXPERIENCE_MONTHS_MAX = 600
-
 export function formatExperience(months: number): string {
   if (months < 12) {
     return `${months} 个月`
@@ -29,32 +26,6 @@ export function avatarInitials(nickname: string): string {
       .toUpperCase()
   }
   return Array.from(normalized).slice(0, 2).join("").toUpperCase()
-}
-
-export function validateTargetRoleInput(value: string): string | null {
-  const normalized = value.trim()
-  if (!normalized || normalized.length > TARGET_ROLE_MAX_LENGTH) {
-    return null
-  }
-  for (const character of normalized) {
-    const codePoint = character.codePointAt(0) ?? 0
-    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
-      return null
-    }
-  }
-  return normalized
-}
-
-export function parseExperienceMonthsInput(value: string): number | null {
-  const normalized = value.trim()
-  if (!/^\d+$/.test(normalized)) {
-    return null
-  }
-  const months = Number(normalized)
-  if (!Number.isSafeInteger(months) || months > EXPERIENCE_MONTHS_MAX) {
-    return null
-  }
-  return months
 }
 
 export function parseProfileOverview(value: unknown): ProfileOverview | null {

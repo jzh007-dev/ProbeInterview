@@ -117,41 +117,76 @@
 }
 
 .target-card {
-  padding: 30rpx;
-  margin-bottom: 22rpx;
+  padding: 32rpx;
+  margin-bottom: 26rpx;
 }
 
-.target-input {
-  padding: 20rpx 24rpx;
-  margin-top: 16rpx;
-  box-sizing: border-box;
-  width: 100%;
+.target-summary {
+  margin-top: 20rpx;
+  display: grid;
+  gap: 18rpx;
+}
+
+.target-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.target-summary-label {
+  color: #7c8881;
+  font-size: 24rpx;
+}
+
+.target-summary-value {
+  font-size: 27rpx;
+}
+
+.target-edit {
+  width: fit-content;
+  padding: 16rpx 30rpx;
+  margin-top: 24rpx;
+  border-radius: 999rpx;
+  color: #334039;
+  border: 1rpx solid rgba(51, 64, 57, 0.24);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 25rpx;
+}
+
+.target-field {
+  margin-top: 28rpx;
+}
+
+.target-field-label {
+  margin-bottom: 12rpx;
+  color: #7c8881;
+  font-size: 24rpx;
+}
+
+.target-picker-value {
+  padding: 22rpx 26rpx;
   border: 1rpx solid rgba(51, 64, 57, 0.14);
   border-radius: 22rpx;
   background: rgba(255, 255, 255, 0.78);
-  font-size: 26rpx;
+  font-size: 27rpx;
   color: #334039;
 }
 
-.target-placeholder {
-  color: #9aa5a0;
-}
-
 .inline-error {
-  margin-top: 14rpx;
+  margin-top: 20rpx;
   color: #b0574a;
   font-size: 23rpx;
 }
 
 .inline-notice {
-  margin-top: 14rpx;
+  margin-top: 20rpx;
   color: #3f7a5f;
   font-size: 23rpx;
 }
 
 .target-save {
   width: 100%;
-  margin-top: 20rpx;
+  margin-top: 32rpx;
   border-radius: 999rpx;
   color: #f6f9f7;
   background: linear-gradient(145deg, #46564d, #303d36);
