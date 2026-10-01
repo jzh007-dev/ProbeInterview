@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     foundation_probe_enabled: bool = True
 
     object_storage_adapter: ObjectStorageAdapter = "fake"
+    # Externally reachable base for fake-storage display URLs (dev convenience
+    # only: it lets WeChat devtools render fake-signed avatars). Never set in
+    # production, which forbids the fake adapter entirely.
+    fake_object_storage_display_base_url: str | None = None
     embedding_adapter: ModelAdapter = "fake"
     structured_llm_adapter: ModelAdapter = "fake"
 

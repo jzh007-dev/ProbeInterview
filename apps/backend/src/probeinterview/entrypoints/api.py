@@ -67,12 +67,16 @@ from probeinterview.platform.foundation.api.contracts import (
     ProblemDetails,
     ReadinessResource,
 )
+from probeinterview.platform.foundation.api.local_display import router as local_display_router
 from probeinterview.platform.foundation.api.problems import problem_response
 from probeinterview.platform.foundation.infrastructure.logging import (
     bind_log_context,
     configure_logging,
 )
-from probeinterview.platform.foundation.infrastructure.object_storage import build_object_storage
+from probeinterview.platform.foundation.infrastructure.object_storage import (
+    FakeObjectStorage,
+    build_object_storage,
+)
 from probeinterview.platform.foundation.infrastructure.persistence import (
     create_engine,
     create_session_factory,
@@ -140,6 +144,10 @@ def create_app(
     )
     mount_business_routers(app, profile_router, knowledge_source_router)
     app.include_router(wechat_auth_router)
+    if isinstance(app.state.object_storage, FakeObjectStorage):
+        # Dev/test display surface for fake-signed object URLs; production
+        # forbids the fake adapter, so this never mounts there.
+        app.include_router(local_display_router)
     app.state.wechat_exchange_service = build_wechat_exchange_service(
         resolved_settings,
         session_factory,

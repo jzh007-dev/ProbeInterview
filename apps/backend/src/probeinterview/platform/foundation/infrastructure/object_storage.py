@@ -41,6 +41,7 @@ class FakeObjectStorage:
     def __init__(
         self,
         *,
+        display_base_url: str | None = None,
         fail_put: bool = False,
         fail_delete: bool = False,
         fail_sign: bool = False,
@@ -51,6 +52,7 @@ class FakeObjectStorage:
         self.fail_put = fail_put
         self.fail_delete = fail_delete
         self.fail_sign = fail_sign
+        self.display_base_url = display_base_url
         self._clock = clock or (lambda: datetime.now(UTC))
         self._lock = Lock()
 
@@ -80,6 +82,12 @@ class FakeObjectStorage:
                 checksum_sha256=checksum_sha256,
             )
 
+    def get(self, object_key: str) -> StoredObject | None:
+        """Return one stored object for the dev display surface, if present."""
+
+        with self._lock:
+            return self.objects.get(object_key)
+
     def delete(self, *, object_key: str) -> None:
         with self._lock:
             self.calls.append(StorageCall(operation="delete", object_key=object_key))
@@ -99,8 +107,13 @@ class FakeObjectStorage:
                 raise ObjectStorageUnavailable
         expires_at = self._clock().astimezone(UTC) + expires_in
         query = urlencode({"expires_at": expires_at.isoformat()})
+        base = (
+            f"{self.display_base_url.rstrip('/')}/local-objects"
+            if self.display_base_url
+            else "https://object-storage.invalid"
+        )
         return SignedObjectUrl(
-            url=f"https://object-storage.invalid/{quote(object_key)}?{query}",
+            url=f"{base}/{quote(object_key)}?{query}",
             expires_at=expires_at,
         )
 
@@ -188,5 +201,5 @@ def build_object_storage(settings: Settings) -> FakeObjectStorage | OssObjectSto
     if settings.object_storage_adapter == "fake":
         if settings.environment == "production":
             raise ValueError("production forbids fake object storage")
-        return FakeObjectStorage()
+        return FakeObjectStorage(display_base_url=settings.fake_object_storage_display_base_url)
     return OssObjectStorage.from_settings(settings)

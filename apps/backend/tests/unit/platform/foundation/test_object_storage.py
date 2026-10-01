@@ -43,6 +43,21 @@ def test_fake_storage_delete_is_idempotent_and_signed_url_is_deterministic() -> 
     assert signed.expires_at == NOW + timedelta(minutes=10)
 
 
+def test_fake_storage_display_base_url_points_at_the_local_surface() -> None:
+    storage = FakeObjectStorage(
+        display_base_url="http://127.0.0.1:8080/",
+        clock=lambda: NOW,
+    )
+
+    signed = storage.sign_get_url(object_key=OBJECT_KEY)
+
+    assert signed.url == (
+        "http://127.0.0.1:8080/local-objects/avatars/user/avatar.png"
+        "?expires_at=2026-09-30T08%3A10%3A00%2B00%3A00"
+    )
+    assert storage.get(OBJECT_KEY) is None
+
+
 def test_oss_storage_supports_private_put_idempotent_delete_and_signed_get() -> None:
     content = b"private"
     bucket = RecordingBucket()
