@@ -18,8 +18,8 @@ npm ci
 
 ## Configure local processes
 
-The checked-in example uses the local actor and deterministic fake adapters. It
-contains no cloud credentials.
+The checked-in example uses WeChat authentication with the deterministic fake
+adapter and fake cloud adapters. It contains no cloud credentials.
 
 ```bash
 cd apps/backend
@@ -45,10 +45,10 @@ uv run python -m probeinterview.entrypoints.database_initializer
 The initializer upgrades the configured database to the Alembic head revision.
 With the development example's
 `PROBEINTERVIEW_DEMO_PROFILE_SEED_ENABLED=true`, it then idempotently creates
-the local actor's user, WeChat-shaped identity, two target profiles, default
-knowledge upload policy, and `knowledge.submit_public` capability. It does not
-create a `user_resume` or knowledge source row because no file has been
-uploaded.
+the demo user, its WeChat identity bound to the configured
+`PROBEINTERVIEW_WECHAT_APP_ID`, two target profiles, default knowledge upload
+policy, and `knowledge.submit_public` capability. It does not create a
+`user_resume` or knowledge source row because no file has been uploaded.
 
 API process:
 
@@ -67,10 +67,28 @@ uv run python -m probeinterview.entrypoints.worker
 The API and worker validate configuration before starting. The worker requires
 the Redis broker URL from `.env`.
 
-With the host API running, retrieve the persisted local actor's overview:
+Business APIs require a bearer session. With the deterministic fake WeChat
+adapter, exchange the seeded demo identity's login code (its openid) for a
+session and reuse the token in the examples below:
+
+```bash
+TOKEN=$(curl --fail --silent --show-error \
+  -H 'Content-Type: application/json' \
+  -d '{"code": "oProbeInterviewDemoOpenId01"}' \
+  http://127.0.0.1:8000/api/v1/auth/wechat/exchanges \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])')
+```
+
+Any unknown code instead returns `registration_required`, which mirrors the
+mini program's first-login registration flow; the fake adapter also maps
+`invalid-code`, `used-code`, `timeout-code`, and `unavailable-code` to its
+rejected and unavailable paths.
+
+With the host API running, retrieve the persisted demo actor's overview:
 
 ```bash
 curl --fail --silent --show-error \
+  -H "Authorization: Bearer ${TOKEN}" \
   http://127.0.0.1:8000/api/v1/me/overview
 ```
 
@@ -86,6 +104,7 @@ through the deterministic fake object storage:
 
 ```bash
 curl --fail-with-body --silent --show-error \
+  -H "Authorization: Bearer ${TOKEN}" \
   -H 'Idempotency-Key: local-knowledge-1' \
   -F 'scope=PRIVATE' \
   -F 'file=@docs/architecture.md;type=text/markdown' \
@@ -97,6 +116,7 @@ a second copy. List only the current actor's stored records and quota:
 
 ```bash
 curl --fail --silent --show-error \
+  -H "Authorization: Bearer ${TOKEN}" \
   http://127.0.0.1:8000/api/v1/me/knowledge-sources
 ```
 
@@ -159,11 +179,19 @@ docker compose \
 The local gateway listens on `http://127.0.0.1:8080` by default. Override it
 with `PROBEINTERVIEW_HTTP_PORT`.
 
-The API and Worker wait for the initializer to exit successfully. Retrieve the
-same seeded overview through the gateway:
+The API and Worker wait for the initializer to exit successfully. Exchange a
+session for the seeded demo identity through the gateway and retrieve the same
+overview:
 
 ```bash
+TOKEN=$(curl --fail --silent --show-error \
+  -H 'Content-Type: application/json' \
+  -d '{"code": "oProbeInterviewDemoOpenId01"}' \
+  http://127.0.0.1:8080/api/v1/auth/wechat/exchanges \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])')
+
 curl --fail --silent --show-error \
+  -H "Authorization: Bearer ${TOKEN}" \
   http://127.0.0.1:8080/api/v1/me/overview
 ```
 
@@ -179,12 +207,15 @@ scripts/test-beta-smoke
 
 This read-only acceptance check rejects custom-component WXSS selectors that
 the WeChat compiler does not allow, runs the upload-page client/component tests
-and TypeScript check, and verifies that the running API exposes the
-knowledge-source route and returns a safe typed owner collection. It does not
-upload or change the development actor's quota. The isolated
-`scripts/test-compose-topology` command covers upload, idempotent replay and
-listing without polluting development data. Override the gateway only when
-intentionally testing another environment:
+and TypeScript check, exchanges a bearer session for the seeded demo identity,
+and verifies that the running API exposes the knowledge-source route and
+returns a safe typed owner collection. It does not upload or change the demo
+actor's quota. It requires the gateway to run the `wechat` authentication mode
+with the `fake` WeChat adapter (the development default); gateways using the
+real adapter cannot serve the deterministic login code. The isolated
+`scripts/test-compose-topology` command covers the protected mount point,
+upload, idempotent replay and listing without polluting development data.
+Override the gateway only when intentionally testing another environment:
 
 ```bash
 PROBEINTERVIEW_BETA_BASE_URL=https://beta.example.invalid \
@@ -224,8 +255,8 @@ it, inject `PROBEINTERVIEW_DOMAIN`, `PROBEINTERVIEW_DATABASE_URL`,
 `PROBEINTERVIEW_OSS_*` settings and `PROBEINTERVIEW_BAILIAN_API_KEY` through the
 deployment environment or secret management. The production override makes
 Caddy the only published service and enables its automatic TLS and HTTP to
-HTTPS handling. It explicitly disables the local actor and demo profile seed;
-the initializer performs migrations only.
+HTTPS handling. It explicitly disables the demo profile seed; the initializer
+performs migrations only.
 
 ## Focused checks
 

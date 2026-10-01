@@ -12,7 +12,7 @@ MVP 拓扑：单台阿里云 ECS + Docker Compose，Caddy 是唯一发布端口�
 ## 部署步骤（每次发布按序执行）
 
 ```bash
-# 1. 构建 + 启动（initializer 只做迁移；生产禁用 demo seed 与 local actor）
+# 1. 构建 + 启动（initializer 只做迁移；生产禁用 demo seed）
 docker compose \
   --project-directory infra/compose \
   -f infra/compose/compose.yaml \
@@ -36,9 +36,9 @@ docker compose --project-directory infra/compose \
 ## 上线后冒烟
 
 - `PROBEINTERVIEW_BETA_BASE_URL=https://<域名> scripts/test-beta-smoke`（只读）。
-- **注意**：wechat-onboarding 落地后业务接口需要 Bearer token，现有 smoke 未携带会话会得到 401。
-  在该 feature 的 §真机验收 完成前，生产冒烟以第 3 步 health 检查为准；smoke 升级为携带
-  测试会话的版本后（见 feature 文件验收清单），恢复本步骤。
+- smoke 通过 fake 适配器的确定性登录码换取 Bearer 会话（seeded demo 身份），
+  仅适用于 `wechat + fake` 环境；生产运行 `real` 适配器时该步骤不可用，
+  冒烟以第 3 步 health 检查为准。
 
 ## 回滚
 

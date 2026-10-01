@@ -8,7 +8,7 @@
 | ① 后端认证基础 | 配置类型化、对象存储端口、迁移 0003、交换+会话、注册+头像 | ✅ 完成 |
 | ② 全局鉴权与概览 | 受保护路由、Bearer 会话解析、可空概览、PUT 目标画像 | ✅ 完成 |
 | ③ 小程序认证边界 | auth store v1/v2、transport、登录协调器、登录页 | ✅ 完成 |
-| ④ 页面改造与收尾 | 首页/我的/上传改造、Compose/smoke、完整验收 | ⬜ |
+| ④ 页面改造与收尾 | 首页/我的/上传改造、Compose/smoke、完整验收 | ✅ 完成（真机验收待测） |
 
 ## 为什么
 
@@ -42,21 +42,12 @@
 AppSecret 仅服务端；`session_key` 不下发不持久化。
 数据库：`users.avatar_object_key` 转 nullable、新增 `wechat_registration_attempts`、`auth_sessions`。
 
-## 当前已知中间态（2026-10-01）
+## 收尾状态（2026-10-01）
 
-后端已默认 `wechat + fake`，业务 API 在挂载点强制 Bearer 会话：匿名请求返回 401
-`authentication_required`，概览契约改为可空字段并移除了 409/404 错误路径。但 Compose
-拓扑检查（`scripts/test-compose-topology` 尾部 4 个匿名 HTTP 断言）和 beta smoke 仍按
-旧匿名流程编写，在本分支上会失败；`docs/development.md` 的 curl 示例也未携带 token。
-这属于阶段 ④ 的收尾范围（等价于原 change 任务 8.1/8.2）：补齐 fake 会话下发与
-smoke 携带 token、更新文档示例后，两者转绿。CI 中 compose-topology job 在本 feature
-合并前预期为红。
-
-小程序侧阶段 ③ 已落地：`pages/login/index` 为启动首屏（app.json 首项），auth store
-v1 + display cache v2 + 共享 transport + 登录协调器就绪。但首页/我的/上传三个 tab
-仍走旧的匿名 `wx.request` 封装（`services/profile-overview.ts`、
-`services/knowledge-sources.ts`），在受保护后端下会 401；页面迁移到共享 transport、
-首页概览回退删除、上传失效清 owner 记录均属阶段 ④。
+阶段 ④ 已完成。seed 的微信身份绑定到进程配置的 `wechat_app_id`，compose 拓扑
+检查与 beta smoke 都通过 fake 适配器的确定性登录码（demo 身份 openid）换会话后
+携带 Bearer 调用受保护路由；compose 检查同时断言匿名概览请求 401。
+`docs/development.md` 的示例全部携带 token。真机验收清单仍待开发者工具/真机执行。
 
 ## 小程序页面与模块
 
@@ -76,7 +67,7 @@ v1 + display cache v2 + 共享 transport + 登录协调器就绪。但首页/我
 
 **改造既有页面**
 - 首页：删除 overview 回退；空目标画像提示 + switchTab 到"我的"
-- 我的：只读昵称头像 + 目标画像创建/编辑
+- 我的：只读昵称头像 + 目标画像创建/编辑；简历/历史卡片仍来自受保护的概览接口
 - 上传：迁移到共享 transport，失效清 owner 记录
 
 ## 验收
@@ -115,13 +106,13 @@ v1 + display cache v2 + 共享 transport + 登录协调器就绪。但首页/我
 - [x] 401 单飞失效：双清、原调用失败一次、重进登录页、无静默登录/重试
 - [x] 登录协调器：先校验两个响应资源再落缓存；半写回滚；只有显式登录动作才调 `wx.login`
 - [x] 登录页全状态机；启动只做缓存校验；重复提交阻断
-- [ ] 首页：缓存命中零 overview 请求；缓存缺失/损坏进登录；空画像提示 + `wx.switchTab` 到"我的"；失效后清空上一用户内容
-- [ ] "我的"：只读昵称头像 + 可编辑目标画像；保存成功原子更新缓存，失败保留输入与旧缓存；首页返回时观察到新值
-- [ ] 上传 tab 迁移到共享 transport；失效后清 owner 记录；配额/上传行为不变
+- [x] 首页：缓存命中零 overview 请求；缓存缺失/损坏进登录；空画像提示 + `wx.switchTab` 到"我的"；失效后清空上一用户内容
+- [x] "我的"：只读昵称头像 + 可编辑目标画像；保存成功原子更新缓存，失败保留输入与旧缓存；首页返回时观察到新值
+- [x] 上传 tab 迁移到共享 transport；失效后清 owner 记录；配额/上传行为不变
 
 **收尾**
-- [ ] 文档/环境模板/seed/Compose/beta smoke 更新且文档命令可照跑；无示例泄漏 secret
-- [ ] `scripts/verify --full` + `scripts/test-compose-topology` + 小程序全套全绿（完成定义见 `docs/workflow.md`）
+- [x] 文档/环境模板/seed/Compose/beta smoke 更新且文档命令可照跑；无示例泄漏 secret
+- [x] `scripts/verify --full` + `scripts/test-compose-topology` + 小程序全套全绿（完成定义见 `docs/workflow.md`）
 
 ## 真机验收
 
