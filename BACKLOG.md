@@ -6,7 +6,7 @@
 ## Next
 
 - [ ] **完成微信登录与 onboarding**（代码与自动化验收完成，真机验收待测）→ `docs/features/wechat-onboarding.md`
-- [ ] **面试回路 spike**（时间盒 2 天，throwaway 不进 main）：百炼连通 → 结构化出题（Pydantic 校验）→ 一轮受控追问 → 粗评分输出。验证产品最大技术风险，结论写回 BACKLOG。
+- [ ] **面试回路 spike**（时间盒 2 天，throwaway 不进 main）：百炼连通 → 结构化出题（Pydantic 校验）→ 一轮受控追问 → 粗评分输出。验证产品最大技术风险，结论写回 BACKLOG → `docs/features/interview-loop-spike.md`
 - [ ] 上线准备：PostgreSQL 备份 cron + 恢复演练 + `/health/ready` 告警（见 `docs/ops.md`，首个真实发布的前置条件）
 
 ## Later（知识管线，顺序保持，单 change 语义改为单 feature 文件）
