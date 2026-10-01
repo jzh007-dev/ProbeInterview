@@ -6,7 +6,8 @@
 ## Next
 
 - [ ] **完成微信登录与 onboarding**（代码与自动化验收完成，真机验收待测）→ `docs/features/wechat-onboarding.md`
-- [ ] **面试回路 spike**（时间盒 2 天，throwaway 不进 main）：百炼连通 → 结构化出题（Pydantic 校验）→ 一轮受控追问 → 粗评分输出。验证产品最大技术风险，结论写回 BACKLOG → `docs/features/interview-loop-spike.md`
+- [x] **面试回路 spike**（2026-10-01 完成）→ 结论：成立：结构化约束三层全过"成立"档——出题 Schema 20/20 通过且虚构清单外 ID 0、三动作枚举命中 15/15、评分引用可定位 23/25（92%）；一轮"出题→追问→评分"≈0.004 元 / 串行 ~24 s，"确认回答→下一题"median 4.2 s ≤10 s。保留事实：追问 action 全部塌缩为 `continue_probe`（`switch_knowledge`/`end_interview` 0/15，含空泛回答），切换时机未检验；评分 2/25 引用用"……"拼接不相邻段（数据：docs/features/done/interview-loop-spike.md）
+  - 波及：`docs/requirements/simulated-interview.md` §4.1 —— spike 的受控出题以给定 fixture 清单为前提，正式交付所需的稳定知识点 ID 体系仍按 §4.1 未决，spike 不替其拍板。
 - [ ] 上线准备：PostgreSQL 备份 cron + 恢复演练 + `/health/ready` 告警（见 `docs/ops.md`，首个真实发布的前置条件）
 
 ## Later（知识管线，顺序保持，单 change 语义改为单 feature 文件）
