@@ -130,3 +130,9 @@ AppSecret 仅服务端；`session_key` 不下发不持久化。
 - 对象存储端口从 knowledge/source 上提到 platform/foundation，签名单独授权。
 - 小程序分三层：auth store（token，v1）/ display cache（展示，v2）/ transport（请求与上传）；
   登录协调器是唯一允许调 `wx.login` 的位置。
+- 目标画像编辑用选择器：岗位为固定目录（先只含"AI 全栈开发"，岗位归一化 feature 落地前不开放自由文本），
+  经验按 1–10 年选择、以月数提交。
+- fake 对象存储适配器在配置了 `PROBEINTERVIEW_FAKE_OBJECT_STORAGE_DISPLAY_BASE_URL` 时，
+  签名 URL 指向 API 的 `/local-objects/` 开发展示路由（每次请求校验签名过期；生产禁用 fake 适配器故不挂载），
+  使开发者工具能渲染注册头像。
+- 知识上传策略对迁移后注册的新用户在首次访问时惰性创建（与 0002 迁移回填相同的默认值）。
