@@ -1,6 +1,6 @@
 """Bearer session authentication invariants."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import UUID
 
 from probeinterview.identity.access.api.dependencies import extract_bearer_token
@@ -24,6 +24,7 @@ def test_missing_credential_resolves_nothing_without_persistence_lookup() -> Non
 
     assert authenticator.authenticate(None) is None
     assert sessions.digests == []
+    assert sessions.nows == []
 
 
 def test_expired_revoked_and_unknown_tokens_resolve_nothing() -> None:
@@ -37,6 +38,7 @@ def test_expired_revoked_and_unknown_tokens_resolve_nothing() -> None:
 
     assert authenticator.authenticate(unknown) is None
     assert sessions.digests == [token_digest(unknown)]
+    assert sessions.nows == [NOW]
 
 
 def test_valid_token_resolves_actor_with_capabilities_read_per_request() -> None:
@@ -60,6 +62,7 @@ def test_valid_token_resolves_actor_with_capabilities_read_per_request() -> None
     assert second == ActorContext(actor_id=USER_ID, capabilities=frozenset())
     assert capabilities.actor_ids == [USER_ID, USER_ID]
     assert sessions.digests == [token_digest(token), token_digest(token)]
+    assert sessions.nows == [NOW, NOW]
 
 
 def test_extract_bearer_token_accepts_only_well_formed_bearer_headers() -> None:
@@ -90,9 +93,10 @@ class StubSessionResolver:
     def __init__(self, user_id: UUID | None) -> None:
         self.user_id = user_id
         self.digests: list[str] = []
+        self.nows: list[datetime] = []
 
     def resolve_active(self, token_digest: str, now: datetime) -> UUID | None:
-        assert now > datetime.now(UTC) - timedelta(minutes=1)
+        self.nows.append(now)
         self.digests.append(token_digest)
         return self.user_id
 
