@@ -92,7 +92,7 @@ def seed_snapshot(engine: Engine) -> dict[str, tuple[tuple[object, ...], ...]]:
 def test_demo_profile_seed_is_idempotent_and_contains_no_resume(
     profile_engine: Engine,
 ) -> None:
-    seed_demo_profile(profile_engine)
+    seed_demo_profile(profile_engine, wechat_app_id="seed-test-app-id")
     first_snapshot = seed_snapshot(profile_engine)
 
     assert first_snapshot == {
@@ -107,7 +107,7 @@ def test_demo_profile_seed_is_idempotent_and_contains_no_resume(
             (
                 DEMO_WECHAT_IDENTITY_ID,
                 DEMO_USER_ID,
-                "wx8f3c2a1d9e7b6c5a",
+                "seed-test-app-id",
                 "oProbeInterviewDemoOpenId01",
                 "uProbeInterviewDemoUnionId1",
             ),
@@ -131,6 +131,17 @@ def test_demo_profile_seed_is_idempotent_and_contains_no_resume(
         "user_resume": (),
     }
 
-    seed_demo_profile(profile_engine)
+    seed_demo_profile(profile_engine, wechat_app_id="seed-test-app-id")
 
     assert seed_snapshot(profile_engine) == first_snapshot
+
+
+def test_demo_profile_seed_keeps_historic_app_id_without_wechat_settings(
+    profile_engine: Engine,
+) -> None:
+    """local_test environments have no wechat_app_id and keep the legacy binding."""
+
+    seed_demo_profile(profile_engine)
+
+    snapshot = seed_snapshot(profile_engine)
+    assert snapshot["wechat_identities"][0][2] == "wx8f3c2a1d9e7b6c5a"

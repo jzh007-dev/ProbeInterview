@@ -79,7 +79,9 @@ def test_database_initializer_migrates_before_optional_seed(
     monkeypatch.setattr(
         database_initializer,
         "seed_demo_profile",
-        lambda received_engine: events.append(("seed", received_engine)),
+        lambda received_engine, **kwargs: events.append(
+            ("seed", received_engine, kwargs.get("wechat_app_id"))
+        ),
     )
 
     database_initializer.initialize_database(make_initializer_settings(seed=True))
@@ -87,7 +89,7 @@ def test_database_initializer_migrates_before_optional_seed(
     assert events == [
         ("upgrade", "postgresql+psycopg://probe:probe@db/probe", "head"),
         ("engine", "postgresql+psycopg://probe:probe@db/probe"),
-        ("seed", engine),
+        ("seed", engine, "entrypoint-test"),
         "dispose",
     ]
 

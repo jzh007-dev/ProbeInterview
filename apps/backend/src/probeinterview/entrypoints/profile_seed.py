@@ -10,8 +10,19 @@ DEMO_PROFILE_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e2001")
 DEMO_SECONDARY_PROFILE_ID = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e2002")
 
 
-def seed_demo_profile(engine: Engine) -> None:
-    """Upsert one deterministic user, identity, and two target profiles."""
+HISTORIC_SEED_APP_ID = "wx8f3c2a1d9e7b6c5a"
+
+
+def seed_demo_profile(engine: Engine, *, wechat_app_id: str | None = None) -> None:
+    """Upsert one deterministic user, identity, and two target profiles.
+
+    The identity binds to the configured ``wechat_app_id`` so the fake
+    adapter's ``<openid>`` login code resolves this user through the same
+    ``(app_id, openid)`` lookup as a real exchange. ``local_test`` has no
+    WeChat settings and keeps the historic binding value.
+    """
+
+    app_id = wechat_app_id if wechat_app_id else HISTORIC_SEED_APP_ID
 
     with engine.begin() as connection:
         connection.execute(
@@ -46,7 +57,7 @@ def seed_demo_profile(engine: Engine) -> None:
             {
                 "id": DEMO_WECHAT_IDENTITY_ID,
                 "user_id": DEMO_USER_ID,
-                "app_id": "wx8f3c2a1d9e7b6c5a",
+                "app_id": app_id,
                 "openid": "oProbeInterviewDemoOpenId01",
                 "unionid": "uProbeInterviewDemoUnionId1",
             },

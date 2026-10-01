@@ -26,7 +26,7 @@ def initialize_database(
 
     engine = create_engine(settings.database_url)
     try:
-        seed_demo_profile(engine)
+        seed_demo_profile(engine, wechat_app_id=settings.wechat_app_id)
     finally:
         engine.dispose()
 
