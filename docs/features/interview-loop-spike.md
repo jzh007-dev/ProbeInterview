@@ -37,11 +37,21 @@
 
 只新建 `spikes/interview-loop/` 这一个目录；不修改 `apps/`、`infra/` 下任何文件，不 import 产品代码。
 
+### 调用面（第一次连通时对着官方文档确认一次，之后不再改）
+
+- **端点**：优先 DashScope 的 OpenAI 兼容端点（`…/compatible-mode/v1/chat/completions`）；连不通再退原生 REST。实际用的 URL 与请求体形状记进 `README.md`。
+- **模型**：型号在 §开跑前检查 里填。**必须选普通通用型号，不要选带长思考 / 推理的型号**——推理型会把单次延迟抬到几十秒，直接污染 §判定门槛 里"确认回答 → 下一题 ≤10 秒"这条结论。
+- **结构化约束**：**必须用 JSON Schema / tool calling 把候选知识点 ID 写成 enum**，不是在 prompt 里写"只能从这些 ID 里选"。这两者的差别正是本 spike 要测的东西——前者是结构保证，后者是祈祷。
+- **传输**：`httpx` 直连，同步调用，不流式（流式是延迟优化，属于"有条件成立"之后的动作，不是这次的判断对象）。
+- **凭证**：`PROBEINTERVIEW_BAILIAN_API_KEY`——与 `apps/backend/.../settings.py` 的 `env_prefix="PROBEINTERVIEW_"` 一致；该字段在配置里已经存在，spike 只是直读同名环境变量。
+- **记费**：每次调用记录 `usage` 的 input/output token，按官方单价折算。单价写进 `README.md` 并注明查询日期，否则三个月后没人知道那个数字是怎么来的。
+
 **不变量**——改了会坏的东西：
 
 - `spikes/` 永不合入 main：只在一次性分支 `spike/interview-loop` 上提交；结论落盘后整个目录废弃
 - API key 只从环境变量读（`PROBEINTERVIEW_*` 惯例，如 `PROBEINTERVIEW_BAILIAN_API_KEY`），不写死、不进 git、不打进日志
 - `scripts/verify` 只覆盖 `apps/backend/{migrations,src,tests}` 与 `apps/miniprogram`，**不检查 `spikes/`**。所以 spike 的 format / lint / mypy 要么手工跑（复用 backend 的 uv 环境指向 `spikes/interview-loop`），要么明确接受不做静态检查——二选一，在 `README.md` 里写清选了哪个，不要写成"verify 会管"
+- **不新增任何依赖**：`httpx` 已在 `apps/backend/pyproject.toml` 的直接依赖里，spike 只用标准库 + `httpx` + `pydantic`。禁止为了 spike 往 `apps/backend/pyproject.toml` 加包——throwaway 代码不该改变产品的依赖面
 - fixture 知识点 ID 与五维维度名都是 throwaway fixture，**不构成** §4.1 的 taxonomy 决策，也不构成五维权重决策
 
 **只读参考**（不修改，实现前必须看）：
@@ -85,6 +95,12 @@
 - **不抽样，逐条判**：5 轮 × 5 维 = 25 条评分全部判读，约 10 分钟。25 条不需要抽样，抽样只会引入"抽到哪几条"的争议。
 
 模板的五类失败路径：并发竞争 / 越权 / 脱敏 / 补偿不适用（无 API、无 DB、无用户）；适用的一条是**超时 / 外部服务失败**——LLM 调用失败与校验失败原样记录为结论输入，不手写重试循环（SDK 默认重试除外）。
+
+## 开跑前检查（5 分钟，做完再开 2 天计时器）
+
+- [ ] `PROBEINTERVIEW_BAILIAN_API_KEY` 已就位（`echo ${PROBEINTERVIEW_BAILIAN_API_KEY:+set}` 返回 `set`）。没有就先申请——别开着计时器等 key。
+- [ ] 模型型号已写进 §调用面：**<填这里>**。选普通通用型号，不要推理型。
+- [ ] 一次最小连通调用成功（一个短请求即可），确认端点与鉴权头写法；把实际 URL、请求体形状、模型名记进 `README.md`。
 
 ## 时间盒
 
@@ -133,7 +149,7 @@
 
 - **已落地**：本立项文档（单元①）。
 - **未落地 / 已知会红**：spike 代码与结论（单元②）全部未开始；`spikes/` 目录尚不存在（本单元明确不建）。
-- **下一步从哪开始**：单元②的**会话 A**——从 §落点 建三个文件 + README，先跑通"连通 + 受控出题"。开跑前照 §判定门槛 的默认值确认一遍（要改就现在改，跑起来之后不再动）。
+- **下一步从哪开始**：单元②的**会话 A**——先做完 §开跑前检查 三行，再从 §落点 建三个文件 + README，跑通"连通 + 受控出题"。§判定门槛 的默认值要改就现在改，跑起来之后不再动。
 
 ## 决策
 
@@ -142,3 +158,4 @@
 - 文字回答替代录音——被否掉的替代方案是把 ASR 拉进来：ASR 的成本 / 延迟 / 音频删除是独立 L3，混进来会让 2 天时间盒和结论都失焦。
 - 裸调 SDK、不走产品端口——被否掉的替代方案是复用 `platform/foundation` 的装配：throwaway 代码耦合产品端口会让"丢弃"变贵；适配器设计留给 spike 通过后的正式单元。
 - 判定门槛写成默认值而不是留空——被否掉的替代方案是"跑完再看数据定标准"：门槛晚于数据就等于事后合理化，尤其是"成立 / 有条件成立 / 不成立"三档，先定才可比。
+- 用 `httpx` 直连 REST，不装 DashScope 官方 SDK——被否掉的替代方案是加依赖：`httpx` 本就是 backend 的直接依赖，而 throwaway 代码改变产品依赖面是不划算的交易；顺带也让"丢弃"真正为零成本。
