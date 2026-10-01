@@ -276,13 +276,13 @@ def render(sessions: list[Session], verbose: bool) -> None:
     if not sessions:
         print("  (没有找到会话记录)")
         return
-    print(f"  {_fit('会话', NAME_WIDTH)} {'起':12} {'调用':>5} {'输入:输出':>9} "
+    print(f"  {_fit('会话', NAME_WIDTH)} {'起':12} {'止':12} {'调用':>5} {'输入:输出':>9} "
           f"{'平均ctx':>7} {'峰值ctx':>7} {'墙钟':>6}  判定")
     for s in sorted(sessions, key=lambda x: x.started or datetime.min.replace(tzinfo=timezone.utc)):
         ratio = f"{s.ratio:.0f}:1" if s.ratio else "-"
-        print(f"  {_fit(s.display_name, NAME_WIDTH)} {_local(s.started):12} {s.calls:>5} {ratio:>9} "
-              f"{_human_tokens(s.avg_context):>7} {_human_tokens(s.peak_context):>7} "
-              f"{s.minutes:>5.0f}分  {s.verdict}")
+        print(f"  {_fit(s.display_name, NAME_WIDTH)} {_local(s.started):12} {_local(s.ended):12} "
+              f"{s.calls:>5} {ratio:>9} {_human_tokens(s.avg_context):>7} "
+              f"{_human_tokens(s.peak_context):>7} {s.minutes:>5.0f}分  {s.verdict}")
         if verbose:
             print(f"  {' ' * NAME_WIDTH} └ {s.session_id} · {s.first_prompt or '(无提示)'}")
 
@@ -311,6 +311,7 @@ def main() -> int:
                 "session": s.session_id,
                 "title": s.display_name,
                 "started": s.started.astimezone(LOCAL_TZ).isoformat() if s.started else None,
+                "ended": s.ended.astimezone(LOCAL_TZ).isoformat() if s.ended else None,
                 "calls": s.calls,
                 "input_tokens": s.input_tokens,
                 "output_tokens": s.output_tokens,
