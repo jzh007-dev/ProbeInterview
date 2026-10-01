@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import sys
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,12 +42,14 @@ ZCODE_ROOT = Path(os.path.expanduser("~/.zcode/cli/rollout"))
 HEALTHY_MAX = 40
 WIDE_MAX = 100
 MIN_CALLS_FOR_VERDICT = 20
+NAME_WIDTH = 30
 
 
 @dataclass
 class Session:
     source: str
     session_id: str
+    title: str | None = None
     started: datetime | None = None
     ended: datetime | None = None
     calls: int = 0
@@ -80,6 +83,11 @@ class Session:
             return "偏大"
         return "打转"
 
+    @property
+    def display_name(self) -> str:
+        """优先用会话标题——那是你在 Claude Code 界面里看到的名字。"""
+        return self.title or self.first_prompt or self.session_id
+
 
 def _parse_ts(value: str | None) -> datetime | None:
     if not value:
@@ -100,6 +108,26 @@ def _human_tokens(n: int) -> str:
     if n >= 1_000:
         return f"{n / 1_000:.0f}k"
     return str(n)
+
+
+def _width(text: str) -> int:
+    """显示宽度：中文等宽字符按两列算，否则表格对不齐。"""
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in text)
+
+
+def _fit(text: str, limit: int) -> str:
+    """按显示宽度截断并补空格。"""
+    out = ""
+    used = 0
+    for ch in text:
+        wide = 2 if unicodedata.east_asian_width(ch) in "WF" else 1
+        if used + wide > limit - 1:
+            out += "…"
+            used += 1
+            break
+        out += ch
+        used += wide
+    return out + " " * (limit - used)
 
 
 def _first_text(content) -> str | None:
@@ -141,6 +169,7 @@ def claude_sessions() -> list[Session]:
     sessions: list[Session] = []
     for path in sorted(project_dir.glob("*.jsonl")):
         session = Session(source="claude", session_id=path.stem[:8])
+        titles: dict[str, str] = {}
         for obj in _iter_jsonl(path):
             stamp = _parse_ts(obj.get("timestamp"))
             if stamp:
@@ -148,6 +177,10 @@ def claude_sessions() -> list[Session]:
                 session.ended = max(session.ended, stamp) if session.ended else stamp
 
             kind = obj.get("type")
+            for key in ("customTitle", "agentName", "aiTitle"):
+                value = obj.get(key)
+                if isinstance(value, str) and value.strip():
+                    titles[key] = value.strip()
             if kind == "user" and session.first_prompt is None:
                 text = _first_text((obj.get("message") or {}).get("content"))
                 if _is_real_prompt(text) and text:
@@ -174,6 +207,9 @@ def claude_sessions() -> list[Session]:
                     session.tools[name] = session.tools.get(name, 0) + 1
 
         if session.calls:
+            session.title = (
+                titles.get("customTitle") or titles.get("agentName") or titles.get("aiTitle")
+            )
             sessions.append(session)
     return sessions
 
@@ -240,15 +276,15 @@ def render(sessions: list[Session], verbose: bool) -> None:
     if not sessions:
         print("  (没有找到会话记录)")
         return
-    print(f"  {'会话':10} {'起':12} {'调用':>5} {'输入:输出':>10} "
-          f"{'平均ctx':>8} {'峰值ctx':>8} {'墙钟':>6}  判定")
+    print(f"  {_fit('会话', NAME_WIDTH)} {'起':12} {'调用':>5} {'输入:输出':>9} "
+          f"{'平均ctx':>7} {'峰值ctx':>7} {'墙钟':>6}  判定")
     for s in sorted(sessions, key=lambda x: x.started or datetime.min.replace(tzinfo=timezone.utc)):
         ratio = f"{s.ratio:.0f}:1" if s.ratio else "-"
-        print(f"  {s.session_id:10} {_local(s.started):12} {s.calls:>5} {ratio:>10} "
-              f"{_human_tokens(s.avg_context):>8} {_human_tokens(s.peak_context):>8} "
+        print(f"  {_fit(s.display_name, NAME_WIDTH)} {_local(s.started):12} {s.calls:>5} {ratio:>9} "
+              f"{_human_tokens(s.avg_context):>7} {_human_tokens(s.peak_context):>7} "
               f"{s.minutes:>5.0f}分  {s.verdict}")
-        if verbose and s.first_prompt:
-            print(f"             └ {s.first_prompt}")
+        if verbose:
+            print(f"  {' ' * NAME_WIDTH} └ {s.session_id} · {s.first_prompt or '(无提示)'}")
 
 
 def main() -> int:
@@ -273,6 +309,7 @@ def main() -> int:
             {
                 "source": s.source,
                 "session": s.session_id,
+                "title": s.display_name,
                 "started": s.started.astimezone(LOCAL_TZ).isoformat() if s.started else None,
                 "calls": s.calls,
                 "input_tokens": s.input_tokens,
