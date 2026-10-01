@@ -1,5 +1,16 @@
 # ProbeInterview Agent Rules
 
+## Which route is this?
+
+| The request is | Take |
+|---|---|
+| A new capability, and its requirements are not written yet | D-1 requirements inventory (`docs/requirements/<name>.md`), then D0 |
+| A change to something that already exists | implement the delivery unit in the current architecture. A missing or stale planning document does **not** require restarting discovery |
+| A failure, or behaviour that contradicts the docs | reproduce → diagnose → fix → verify; see `docs/workflow.md` §两阶段 |
+| Instructions, docs or a hand-off only | produce the artifact and state its limits. Do not start an unrequested implementation |
+
+The stages in `docs/workflow.md` are a route, not five approval gates, and not a document set required for every edit. **A file existing does not prove that stage is complete.**
+
 ## Workflow
 
 - Work comes from `BACKLOG.md`. **One delivery unit per session.** A delivery unit is one commit-sized, independently reviewable change (~≤500 lines of diff) — not a whole feature, and not a single acceptance bullet. Never run several units in one session: later units inherit the earlier unit's context, which is the most expensive thing we have measured.
@@ -15,11 +26,23 @@
 
 ## Status reporting
 
-End every turn in exactly one of these states:
+End every turn in exactly one state:
 
 - `RUNNING` — work continues autonomously, no user action needed. Commentary only; never end a turn in this state.
 - `COMPLETE` — the requested work plus every applicable verification and hand-off step is done.
 - `NEEDS_DECISION` — a concrete choice or extra authority is required. Name the exact decision; never ask for a generic "continue".
+
+Whenever you stop a delivery unit for review, report exactly these five lines:
+
+```text
+Changed:       <files, one line each>
+Checked:       <commands actually run, with their raw output>
+Not checked:   <what you did not verify, and why>
+Next decision: <the one thing you need from the user, or "none">
+Recovery:      <how to undo this unit if it is wrong>
+```
+
+`Not checked` is mandatory. An empty `Not checked` means you looked for gaps and found none — not that writing the section was inconvenient.
 
 ## Stop signals
 
@@ -28,7 +51,7 @@ Hit any of these, stop and reassess instead of adding another branch:
 - **The same class of problem shows up a second time** (another compatibility branch, another protocol hop, another special case). The second occurrence is a reset point, not an optimisation point: group the root causes and re-read the whole diff against the original requirement.
 - The change grows beyond the files listed in §落点. Stop, update the feature file's §范围 / §落点, then continue.
 - The work needs a new table, port, async flow or third-party dependency. Stop; that is L2 or needs an ADR.
-- You are about to reach for `git stash`, a throwaway container, or a full test suite just to answer "was this already broken?". Answer it with one query, one minimal test, or `git show HEAD:<file>` instead.
+- **Two failed attempts at the same error is the limit.** Stop speculative edits: list 3–5 plausible causes, compare them against the evidence you already have, and pick the cheapest one that a single command can falsify. `git stash`, throwaway containers and full test-suite reruns are symptoms of this, not methods. To answer "was this already broken?", use one query, one minimal test, or `git show HEAD:<file>`.
 - You catch yourself writing "looks fine", "it's just a small change", "I'll test it later", "good enough for now". Go run `scripts/verify`.
 
 ## Verification
