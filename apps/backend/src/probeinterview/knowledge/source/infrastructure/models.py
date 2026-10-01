@@ -21,6 +21,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from probeinterview.platform.foundation.infrastructure.persistence import Base
 
+DEFAULT_DAILY_SUCCESS_LIMIT = 2
+DEFAULT_EFFECTIVE_SOURCE_LIMIT = 100
+DEFAULT_QUOTA_TIMEZONE = "Asia/Shanghai"
+
 
 class KnowledgeUploadPolicyModel(Base):
     """Database-backed per-user admission policy."""
@@ -46,12 +50,16 @@ class KnowledgeUploadPolicyModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    daily_success_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
-    effective_source_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    daily_success_limit: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=DEFAULT_DAILY_SUCCESS_LIMIT
+    )
+    effective_source_limit: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=DEFAULT_EFFECTIVE_SOURCE_LIMIT
+    )
     quota_timezone: Mapped[str] = mapped_column(
         String(64),
         nullable=False,
-        default="Asia/Shanghai",
+        default=DEFAULT_QUOTA_TIMEZONE,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

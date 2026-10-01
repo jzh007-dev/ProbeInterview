@@ -5,6 +5,7 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, sessionmaker
 
 from probeinterview.knowledge.source.application.contracts import (
@@ -24,6 +25,9 @@ from probeinterview.knowledge.source.application.errors import (
     UploadPolicyUnavailable,
 )
 from probeinterview.knowledge.source.infrastructure.models import (
+    DEFAULT_DAILY_SUCCESS_LIMIT,
+    DEFAULT_EFFECTIVE_SOURCE_LIMIT,
+    DEFAULT_QUOTA_TIMEZONE,
     KnowledgeSourceModel,
     KnowledgeSourceVersionModel,
     KnowledgeUploadPolicyModel,
@@ -38,13 +42,7 @@ class SqlAlchemyKnowledgeSourceRepository:
 
     def reserve(self, request: ReservationRequest) -> UploadReservation:
         with self._session_factory.begin() as session:
-            policy = session.scalar(
-                select(KnowledgeUploadPolicyModel)
-                .where(KnowledgeUploadPolicyModel.user_id == request.actor_id)
-                .with_for_update()
-            )
-            if policy is None:
-                raise UploadPolicyUnavailable
+            policy = self._locked_policy(session, request.actor_id)
 
             bound = session.scalar(
                 select(KnowledgeSourceModel).where(
@@ -228,13 +226,7 @@ class SqlAlchemyKnowledgeSourceRepository:
         quota_day: date,
     ) -> KnowledgeSourceCollection:
         with self._session_factory() as session:
-            policy = session.scalar(
-                select(KnowledgeUploadPolicyModel).where(
-                    KnowledgeUploadPolicyModel.user_id == actor_id
-                )
-            )
-            if policy is None:
-                raise UploadPolicyUnavailable
+            policy = self._ensure_policy(session, actor_id)
             sources = session.scalars(
                 select(KnowledgeSourceModel)
                 .where(
@@ -263,6 +255,53 @@ class SqlAlchemyKnowledgeSourceRepository:
             source=self._item(session, source),
             quota=self._quota(session, actor_id, quota_day, policy),
         )
+
+    def _locked_policy(self, session: Session, actor_id: UUID) -> KnowledgeUploadPolicyModel:
+        """Return the actor's policy row, creating the default on first use.
+
+        Every user is admitted with the default policy (2 uploads per
+        Shanghai day, 100 effective sources) — the same values the 0002
+        migration backfilled for pre-existing users. The row doubles as the
+        cross-process admission lock, so concurrent first writes converge on
+        one row through the primary key.
+        """
+
+        session.execute(
+            pg_insert(KnowledgeUploadPolicyModel)
+            .values(
+                user_id=actor_id,
+                daily_success_limit=DEFAULT_DAILY_SUCCESS_LIMIT,
+                effective_source_limit=DEFAULT_EFFECTIVE_SOURCE_LIMIT,
+                quota_timezone=DEFAULT_QUOTA_TIMEZONE,
+            )
+            .on_conflict_do_nothing(index_elements=[KnowledgeUploadPolicyModel.user_id])
+        )
+        policy = session.scalar(
+            select(KnowledgeUploadPolicyModel)
+            .where(KnowledgeUploadPolicyModel.user_id == actor_id)
+            .with_for_update()
+        )
+        assert policy is not None
+        return policy
+
+    def _ensure_policy(self, session: Session, actor_id: UUID) -> KnowledgeUploadPolicyModel:
+        """Return the actor's policy row without locking, creating the default."""
+
+        session.execute(
+            pg_insert(KnowledgeUploadPolicyModel)
+            .values(
+                user_id=actor_id,
+                daily_success_limit=DEFAULT_DAILY_SUCCESS_LIMIT,
+                effective_source_limit=DEFAULT_EFFECTIVE_SOURCE_LIMIT,
+                quota_timezone=DEFAULT_QUOTA_TIMEZONE,
+            )
+            .on_conflict_do_nothing(index_elements=[KnowledgeUploadPolicyModel.user_id])
+        )
+        policy = session.scalar(
+            select(KnowledgeUploadPolicyModel).where(KnowledgeUploadPolicyModel.user_id == actor_id)
+        )
+        assert policy is not None
+        return policy
 
     def _item(
         self,

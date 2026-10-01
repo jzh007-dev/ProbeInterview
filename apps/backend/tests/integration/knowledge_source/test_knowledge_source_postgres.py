@@ -401,6 +401,78 @@ async def test_concurrent_uploads_cannot_exceed_last_database_slot(
     assert len(storage.objects) == 1
 
 
+async def test_user_without_policy_row_gets_the_default_on_first_access(
+    knowledge_database: tuple[str, Engine],
+) -> None:
+    """Users registered after the 0002 backfill still get the default policy.
+
+    The migration only backfilled rows for pre-existing users, so a fresh
+    registration has no row; the first list or upload must transparently
+    create the same default instead of failing with a 500.
+    """
+
+    database_url, engine = knowledge_database
+    fresh_actor_id = UUID("018f7f64-3c6a-7d21-95a8-4d1b8c2e3002")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                insert into users (id, nickname, avatar_object_key)
+                values (:actor_id, 'Fresh Registrant', null)
+                """
+            ),
+            {"actor_id": fresh_actor_id},
+        )
+
+    with engine.connect() as connection:
+        policy_count = connection.scalar(
+            text(
+                """
+                select count(*) from knowledge_upload_policies
+                where user_id = :actor_id
+                """
+            ),
+            {"actor_id": fresh_actor_id},
+        )
+    assert policy_count == 0
+
+    async with api_client(database_url, fresh_actor_id) as (client, storage):
+        collection = await client.get("/api/v1/me/knowledge-sources")
+        assert collection.status_code == 200
+        assert collection.json() == {
+            "quota": {
+                "timezone": "Asia/Shanghai",
+                "daily_limit": 2,
+                "daily_used": 0,
+                "effective_source_limit": 100,
+                "effective_source_count": 0,
+            },
+            "items": [],
+        }
+
+        accepted = await client.post(
+            "/api/v1/me/knowledge-sources",
+            headers={"Idempotency-Key": "fresh-upload-1"},
+            data={"original_filename": "新用户笔记.md"},
+            files={"file": ("fresh.md", b"# Fresh", "text/markdown")},
+        )
+        assert accepted.status_code == 202
+        assert accepted.json()["quota"]["daily_used"] == 1
+
+    with engine.connect() as connection:
+        policy = connection.execute(
+            text(
+                """
+                select daily_success_limit, effective_source_limit, quota_timezone
+                from knowledge_upload_policies
+                where user_id = :actor_id
+                """
+            ),
+            {"actor_id": fresh_actor_id},
+        ).one()
+    assert tuple(policy) == (2, 100, "Asia/Shanghai")
+
+
 @pytest.fixture
 async def unused_fixture() -> None:
     """Keep pytest-asyncio in strict mode from treating helpers as fixtures."""
