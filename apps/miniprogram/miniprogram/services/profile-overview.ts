@@ -1,3 +1,9 @@
+import {
+  parseProfileOverview,
+  parseTargetProfileResource,
+} from "../utils/profile-overview"
+import {requestJson, TransportError} from "./transport"
+
 export interface TargetProfileOverview {
   id: string
   target_role: string
@@ -24,68 +30,65 @@ export interface ProfileOverview {
   recent_scores: unknown[]
 }
 
-interface RequestResponse {
-  statusCode: number
-  data: unknown
-}
-
-interface RequestOptions {
-  url: string
-  method: "GET"
-  success: (response: RequestResponse) => void
-  fail: () => void
-}
-
-export type ProfileOverviewRequest = (options: RequestOptions) => void
-
-export type ProfileOverviewRequestErrorCode = "http_error" | "network_error"
-
-export class ProfileOverviewRequestError extends Error {
-  readonly code: ProfileOverviewRequestErrorCode
-
-  constructor(code: ProfileOverviewRequestErrorCode) {
-    super(code === "network_error" ? "Unable to reach the API." : "The API request failed.")
-    this.name = "ProfileOverviewRequestError"
-    this.code = code
-  }
+export interface TargetProfileWriteInput {
+  targetRole: string
+  relevantExperienceMonths: number
 }
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8080"
+const OVERVIEW_ENDPOINT = "/api/v1/me/overview"
+const DEFAULT_TARGET_PROFILE_ENDPOINT = "/api/v1/me/default-target-profile"
 
-export function fetchProfileOverview(
-  request: ProfileOverviewRequest = requestWithWechat,
+export async function fetchProfileOverview(
   apiBaseUrl = DEFAULT_API_BASE_URL,
 ): Promise<ProfileOverview> {
-  return new Promise((resolve, reject) => {
-    request({
-      url: `${apiBaseUrl}/api/v1/me/overview`,
-      method: "GET",
-      success(response) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(response.data as ProfileOverview)
-          return
-        }
-        reject(new ProfileOverviewRequestError("http_error"))
-      },
-      fail() {
-        reject(new ProfileOverviewRequestError("network_error"))
-      },
-    })
-  })
+  const payload = await requestJson(
+    {url: `${apiBaseUrl}${OVERVIEW_ENDPOINT}`, method: "GET"},
+    {authenticated: true},
+  )
+  const overview = parseProfileOverview(payload)
+  if (overview === null) {
+    throw new TransportError("invalid_response")
+  }
+  return overview
 }
 
-const requestWithWechat: ProfileOverviewRequest = (options) => {
-  wx.request({
-    url: options.url,
-    method: options.method,
-    success(response) {
-      options.success({
-        statusCode: response.statusCode,
-        data: response.data,
-      })
+export async function putDefaultTargetProfile(
+  input: TargetProfileWriteInput,
+  apiBaseUrl = DEFAULT_API_BASE_URL,
+): Promise<TargetProfileOverview> {
+  const payload = await requestJson(
+    {
+      url: `${apiBaseUrl}${DEFAULT_TARGET_PROFILE_ENDPOINT}`,
+      method: "PUT",
+      data: {
+        target_role: input.targetRole,
+        relevant_experience_months: input.relevantExperienceMonths,
+      },
     },
-    fail() {
-      options.fail()
-    },
-  })
+    {authenticated: true},
+  )
+  const profile = parseTargetProfileResource(payload)
+  if (profile === null) {
+    throw new TransportError("invalid_response")
+  }
+  return profile
+}
+
+const SAFE_PROFILE_PROBLEM_MESSAGES: Record<string, string> = {
+  invalid_target_role: "目标岗位需为 1 到 200 个字符",
+  validation_error: "请检查目标岗位与经验月数的取值",
+}
+
+export function describeProfileError(error: unknown): string {
+  if (error instanceof TransportError) {
+    if (error.problemCode !== null) {
+      const safeMessage = SAFE_PROFILE_PROBLEM_MESSAGES[error.problemCode]
+      if (safeMessage !== undefined) {
+        return safeMessage
+      }
+    }
+    return error.message
+  }
+  return "请求失败，请稍后重试"
 }

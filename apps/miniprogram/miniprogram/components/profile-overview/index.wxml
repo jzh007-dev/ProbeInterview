@@ -10,7 +10,7 @@
     <view id="retry-overview" class="retry-action" bindtap="onRetry">重新加载</view>
   </view>
 
-  <block wx:elif="{{status == 'success' && overview}}">
+  <block wx:elif="{{status == 'success' && viewer}}">
     <view class="page-head">
       <view>
         <view class="head-kicker">个人中心</view>
@@ -26,26 +26,64 @@
     <view class="profile-card soft-card">
       <view class="avatar">
         <image
-          wx:if="{{overview.avatar_url && !avatarFailed}}"
+          wx:if="{{viewer.avatarUrl && !avatarFailed}}"
           class="avatar-image"
-          src="{{overview.avatar_url}}"
+          src="{{viewer.avatarUrl}}"
           mode="aspectFill"
           binderror="onAvatarError"
         />
         <text wx:else>{{initials}}</text>
       </view>
       <view class="profile-copy">
-        <view class="profile-name">{{overview.nickname}}</view>
+        <view class="profile-name">{{viewer.nickname}}</view>
         <view class="profile-meta">
           {{experienceLabel}}{{experienceLabel && targetRoleLabel ? " · " : ""}}{{targetRoleLabel}}
         </view>
       </view>
     </view>
 
+    <view class="target-card soft-card">
+      <view class="section-title">目标画像</view>
+      <view wx:if="{{!viewer.defaultTargetProfile}}" class="empty-copy">
+        尚未设置目标岗位，设置后训练将围绕目标展开
+      </view>
+
+      <input
+        id="target-role-input"
+        class="target-input"
+        type="text"
+        placeholder="目标岗位，如：AI 全栈开发"
+        placeholder-class="target-placeholder"
+        value="{{profileRoleInput}}"
+        disabled="{{profileSaving}}"
+        bindinput="onProfileRoleInput"
+      />
+      <input
+        id="target-months-input"
+        class="target-input"
+        type="number"
+        placeholder="相关经验月数（0-600）"
+        placeholder-class="target-placeholder"
+        value="{{profileMonthsInput}}"
+        disabled="{{profileSaving}}"
+        bindinput="onProfileMonthsInput"
+      />
+
+      <view wx:if="{{profileError}}" class="inline-error">{{profileError}}</view>
+      <view wx:if="{{profileNotice}}" class="inline-notice">{{profileNotice}}</view>
+      <button
+        id="save-target-profile"
+        class="target-save"
+        loading="{{profileSaving}}"
+        disabled="{{profileSaving}}"
+        bindtap="onSaveProfile"
+      >{{profileSaving ? '正在保存' : '保存目标画像'}}</button>
+    </view>
+
     <view class="resume-card mint-card">
       <view class="section-label">当前简历</view>
       <view
-        wx:if="{{overview.current_resume}}"
+        wx:if="{{overview && overview.current_resume}}"
         id="preview-current-resume"
         class="resume-row"
         data-action="preview-current-resume"
@@ -68,8 +106,11 @@
       bindtap="handleAction"
     >
       <view class="section-title">历史成绩</view>
-      <view wx:if="{{overview.recent_scores.length == 0}}" class="empty-copy">
+      <view wx:if="{{overview && overview.recent_scores.length == 0}}" class="empty-copy">
         暂无面试记录
+      </view>
+      <view wx:elif="{{!overview}}" class="empty-copy">
+        成绩记录加载中
       </view>
     </view>
 

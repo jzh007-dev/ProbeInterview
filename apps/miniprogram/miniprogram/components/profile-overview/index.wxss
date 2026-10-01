@@ -116,6 +116,48 @@
   box-shadow: 0 24rpx 48rpx rgba(71, 121, 111, 0.13);
 }
 
+.target-card {
+  padding: 30rpx;
+  margin-bottom: 22rpx;
+}
+
+.target-input {
+  padding: 20rpx 24rpx;
+  margin-top: 16rpx;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1rpx solid rgba(51, 64, 57, 0.14);
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 26rpx;
+  color: #334039;
+}
+
+.target-placeholder {
+  color: #9aa5a0;
+}
+
+.inline-error {
+  margin-top: 14rpx;
+  color: #b0574a;
+  font-size: 23rpx;
+}
+
+.inline-notice {
+  margin-top: 14rpx;
+  color: #3f7a5f;
+  font-size: 23rpx;
+}
+
+.target-save {
+  width: 100%;
+  margin-top: 20rpx;
+  border-radius: 999rpx;
+  color: #f6f9f7;
+  background: linear-gradient(145deg, #46564d, #303d36);
+  font-size: 27rpx;
+}
+
 .resume-row {
   margin-top: 12rpx;
 }

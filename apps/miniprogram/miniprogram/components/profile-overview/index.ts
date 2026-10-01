@@ -1,10 +1,20 @@
 import {
+  currentUserSnapshotFromOverview,
+  readCurrentUserSnapshot,
+  writeCurrentUserSnapshot,
+  type CurrentUserSnapshot,
+} from "../../services/current-user-store"
+import {
+  describeProfileError,
   fetchProfileOverview,
+  putDefaultTargetProfile,
   type ProfileOverview,
 } from "../../services/profile-overview"
 import {
   avatarInitials,
   formatExperience,
+  parseExperienceMonthsInput,
+  validateTargetRoleInput,
 } from "../../utils/profile-overview"
 
 export const PROFILE_ACTIONS = [
@@ -21,23 +31,37 @@ type ViewStatus = "loading" | "success" | "error"
 
 interface ProfileOverviewData {
   status: ViewStatus
+  viewer: CurrentUserSnapshot | null
   overview: ProfileOverview | null
   experienceLabel: string
   targetRoleLabel: string
   initials: string
   avatarFailed: boolean
   errorMessage: string
+  profileRoleInput: string
+  profileMonthsInput: string
+  profileFormTouched: boolean
+  profileSaving: boolean
+  profileError: string
+  profileNotice: string
   lastAction: ProfileAction | ""
 }
 
 const INITIAL_DATA: ProfileOverviewData = {
   status: "loading",
+  viewer: null,
   overview: null,
   experienceLabel: "",
   targetRoleLabel: "",
   initials: "",
   avatarFailed: false,
   errorMessage: "",
+  profileRoleInput: "",
+  profileMonthsInput: "",
+  profileFormTouched: false,
+  profileSaving: false,
+  profileError: "",
+  profileNotice: "",
   lastAction: "",
 }
 
@@ -53,39 +77,58 @@ Component({
 
   lifetimes: {
     attached() {
+      this.seedFromCache()
       void this.loadOverview()
     },
   },
 
   methods: {
-    async loadOverview() {
+    seedFromCache() {
+      const snapshot = readCurrentUserSnapshot()
+      if (snapshot === null) {
+        return
+      }
+      this.applyViewer(snapshot)
+    },
+
+    applyViewer(snapshot: CurrentUserSnapshot) {
+      const profile = snapshot.defaultTargetProfile
       this.setData({
-        status: "loading",
-        overview: null,
-        experienceLabel: "",
-        targetRoleLabel: "",
-        initials: "",
-        avatarFailed: false,
-        errorMessage: "",
+        status: "success",
+        viewer: snapshot,
+        initials: avatarInitials(snapshot.nickname),
+        experienceLabel:
+          profile === null ? "" : formatExperience(profile.relevantExperienceMonths),
+        targetRoleLabel:
+          profile === null ? "尚未设置目标岗位" : profile.targetRole,
       })
+      if (!this.data.profileFormTouched) {
+        this.setData({
+          profileRoleInput: profile === null ? "" : profile.targetRole,
+          profileMonthsInput:
+            profile === null ? "" : String(profile.relevantExperienceMonths),
+        })
+      }
+    },
+
+    async loadOverview() {
+      if (this.data.viewer === null) {
+        this.setData({status: "loading", errorMessage: ""})
+      }
       try {
         const overview = await fetchProfileOverview()
-        const targetProfile = overview.default_target_profile
-        this.setData({
-          status: "success",
-          overview,
-          experienceLabel:
-            targetProfile === null
-              ? ""
-              : formatExperience(targetProfile.relevant_experience_months),
-          targetRoleLabel:
-            targetProfile === null ? "尚未设置目标岗位" : targetProfile.target_role,
-          initials: avatarInitials(overview.nickname),
-        })
-      } catch {
+        const snapshot = writeCurrentUserSnapshot(
+          currentUserSnapshotFromOverview(overview),
+        )
+        this.setData({overview, avatarFailed: false, errorMessage: ""})
+        this.applyViewer(snapshot)
+      } catch (error) {
+        if (this.data.viewer !== null) {
+          // Stale cache content stays visible; the next show retries.
+          return
+        }
         this.setData({
           status: "error",
-          overview: null,
           errorMessage: "个人概览加载失败，请稍后重试",
         })
       }
@@ -97,6 +140,76 @@ Component({
 
     onAvatarError() {
       this.setData({ avatarFailed: true })
+    },
+
+    onProfileRoleInput(event: {detail: {value?: unknown}}) {
+      const value = event.detail.value
+      if (typeof value !== "string") {
+        return
+      }
+      this.setData({profileRoleInput: value, profileFormTouched: true})
+    },
+
+    onProfileMonthsInput(event: {detail: {value?: unknown}}) {
+      const value = event.detail.value
+      if (typeof value !== "string") {
+        return
+      }
+      this.setData({profileMonthsInput: value, profileFormTouched: true})
+    },
+
+    async onSaveProfile() {
+      if (this.data.profileSaving || this.data.viewer === null) {
+        return
+      }
+      const targetRole = validateTargetRoleInput(this.data.profileRoleInput)
+      if (targetRole === null) {
+        this.setData({
+          profileError: "目标岗位需为 1 到 200 个字符",
+          profileNotice: "",
+        })
+        return
+      }
+      const months = parseExperienceMonthsInput(this.data.profileMonthsInput)
+      if (months === null) {
+        this.setData({
+          profileError: "经验月数需为 0 到 600 的整数",
+          profileNotice: "",
+        })
+        return
+      }
+
+      this.setData({profileSaving: true, profileError: "", profileNotice: ""})
+      try {
+        const saved = await putDefaultTargetProfile({
+          targetRole,
+          relevantExperienceMonths: months,
+        })
+        // One validated cache write carries both the saved profile and the
+        // rest of the display snapshot, so home observes it atomically.
+        const updated = writeCurrentUserSnapshot({
+          ...this.data.viewer,
+          defaultTargetProfile: {
+            targetRole: saved.target_role,
+            relevantExperienceMonths: saved.relevant_experience_months,
+          },
+        })
+        this.setData({
+          viewer: updated,
+          overview:
+            this.data.overview === null
+              ? null
+              : {...this.data.overview, default_target_profile: saved},
+          experienceLabel: formatExperience(saved.relevant_experience_months),
+          targetRoleLabel: saved.target_role,
+          profileNotice: "目标画像已保存",
+        })
+      } catch (error) {
+        // Inputs and the previous cache stay untouched on failure.
+        this.setData({profileError: describeProfileError(error)})
+      } finally {
+        this.setData({profileSaving: false})
+      }
     },
 
     handleAction(
